@@ -1,25 +1,25 @@
 {
   "expo": {
-    "name": "Confessional",
-    "slug": "tribe-league",
+    "name": "Reality Check",
+    "slug": "realitycheck",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mattlalanne.tribeleague",
+      "bundleIdentifier": "com.mattlalanne.realitycheck",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Confessional uses your photos so you can set a profile picture and castaway photos for your league."
+        "NSPhotoLibraryUsageDescription": "Reality Check uses your photos so you can set a profile picture and cast photos for your league."
       },
       "icon": "./assets/icon.png",
       "associatedDomains": ["applinks:playrealitycheck.web.app"]
     },
     "android": {
-      "package": "com.mattlalanne.tribeleague",
+      "package": "com.mattlalanne.realitycheck",
       "adaptiveIcon": {
-        "backgroundColor": "#ff4d5a",
+        "backgroundColor": "#fdc288",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -75,7 +75,7 @@
     "splash": {
       "image": "./assets/brand/splash.jpg",
       "resizeMode": "cover",
-      "backgroundColor": "#ff4d5a"
+      "backgroundColor": "#fdc288"
     }
   }
 }

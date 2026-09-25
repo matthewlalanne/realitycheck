@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Who's signed in to Tribe League on this device, and the leagues they've
+// Who's signed in to Reality Check on this device, and the leagues they've
 // created here. In preview this is all local; with real accounts it moves to
 // Firebase Auth + the database.
 const KEY = 'tl:session';

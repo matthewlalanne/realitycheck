@@ -4,9 +4,11 @@ import { getFunctions } from 'firebase/functions';
 import { getAuth, initializeAuth, type Auth, type Persistence } from 'firebase/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Tribe League's OWN Firebase project — deliberately not Outlast's
-// (survivor-51-porterville), which runs the live private league. Nothing in
-// this app may ever point at that project.
+// Reality Check's OWN Firebase project (still named tribe-league-app from
+// before the rename — Firebase project ids can't be renamed in place, so it
+// stays that way unless this gets migrated to a new project) — deliberately
+// not Outlast's (survivor-51-porterville), which runs the live private
+// league. Nothing in this app may ever point at that project.
 const firebaseConfig = {
   apiKey: 'AIzaSyDzZP357t1kT1-s-osKUouwsY3p4Wx20FI',
   authDomain: 'tribe-league-app.firebaseapp.com',

@@ -1,8 +1,9 @@
 #!/bin/zsh
 # One-way copy: READS the live private league (Outlast, survivor-51-porterville)
-# and WRITES a cleaned copy into Tribe League's own database (tribe-league-app).
+# and WRITES a cleaned copy into Reality Check's own database (still the
+# tribe-league-app Firebase project — see the naming note in README.md).
 # Never writes to Outlast. Safe to re-run any time to refresh test data; it
-# overwrites Tribe League's copy of these nodes.
+# overwrites Reality Check's copy of these nodes.
 #
 # Left out on purpose: push tokens (so no league member's phone can ever be
 # pinged from here), announcements, app-version/typing/read markers, recap

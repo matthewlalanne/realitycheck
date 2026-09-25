@@ -1,6 +1,10 @@
 # Reality Check
 
-Formerly Confessional / Tribe League (folder, Firebase and bundle ids keep the old names).
+Formerly Confessional / Tribe League. The bundle/package id is now
+`com.mattlalanne.realitycheck` (staged in `design/app.json.build-settings.json`,
+applied at the next build). The Firebase project itself is still named
+`tribe-league-app` — Firebase project ids can't be renamed in place, only
+migrated to a new project, which nothing here has done.
 
 The public version of the Outlast fantasy-league app, built alongside it.
 Outlast (`../Outlast`) keeps running the private league for the rest of
@@ -46,11 +50,11 @@ Work list:
    fake "Test Show" season, then create the real Amazing Race league.
 
 ## Separation from Outlast (don't break these)
-| | Outlast (live league) | Tribe League (this) |
+| | Outlast (live league) | Reality Check (this) |
 |---|---|---|
 | Code | `../Outlast/survivor-app` | `app/` (copied 2026-09-24) |
-| Firebase project | `survivor-51-porterville` | `tribe-league-app` |
-| App id | `com.mattlalanne.outlast` | `com.mattlalanne.tribeleague` |
+| Firebase project | `survivor-51-porterville` | `tribe-league-app` (old name; see note above) |
+| App id | `com.mattlalanne.outlast` | `com.mattlalanne.realitycheck` (staged, not built yet) |
 | Expo/EAS project | dbe05b04-… | **not created yet** (`eas init`) |
 
 `app/app.json` has no EAS project id or update URL on purpose, so an
@@ -90,7 +94,8 @@ Nothing below can be done from here; each needs your own Google/Apple account.
    method → enable **Google** (this auto-creates an OAuth client). Then
    Google Cloud console → APIs & Services → Credentials → find the
    **iOS** OAuth client Firebase created (or create one, type "iOS", bundle
-   id `com.mattlalanne.tribeleague`) → copy its Client ID. Paste it into
+   id `com.mattlalanne.realitycheck` once the rename is built — see the
+   naming note above) → copy its Client ID. Paste it into
    `app/lib/googleAuth.ts` as `GOOGLE_IOS_CLIENT_ID`, replacing `REPLACE_ME`.
 5. Rebuild (`eas build --profile simulator` or a real build) — the URL scheme
    and OAuth client are compiled in, so this needs a fresh build, not just an

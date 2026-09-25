@@ -2,7 +2,7 @@ import { Image, StyleSheet, Text, View, type ImageStyle, type StyleProp } from '
 import { useLeague } from '../contexts/LeagueContext';
 import { tribeOf, textOnTribe } from '../lib/tribes';
 
-// A castaway's picture. Tribe League ships no network photos (they're CBS's);
+// A castaway's picture. Reality Check ships no network photos (they're CBS's);
 // a league can upload its own later (`photoUrl`), and until then every
 // castaway gets their initials on their tribe's colour — which has to look
 // good on its own, because it's the default.
