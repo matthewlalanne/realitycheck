@@ -54,6 +54,11 @@ export function WelcomeScreen({
     <ImageBackground source={sunset} style={styles.hero} resizeMode="cover">
       {/* Light clock over the dark photo, whatever the app theme. */}
       <StatusBar style="light" />
+      {/* colors.photoScrim exists exactly for this — a dark overlay so white
+          button text/borders keep contrast regardless of which part of the
+          photo (sky, glow) lands underneath — but was never actually
+          rendered here. */}
+      <View style={styles.scrim} />
       <View style={[styles.heroInner, { paddingTop: insets.top + 60, paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
         {/* The logo is part of the picture, identical to the loading screen. */}
         <View />
