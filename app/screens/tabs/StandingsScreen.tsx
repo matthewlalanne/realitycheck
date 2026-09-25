@@ -46,7 +46,7 @@ export default function StandingsScreen({ navigation }: Props) {
   useScrollToTop(scrollRef);
   // Which league is on screen is decided globally in LeagueContext, so the
   // switcher in the header moves every tab at once.
-  const { root, league: lg, leagueKey, teamId, playerName } = useLeague();
+  const { root, league: lg, leagueKey, teamId, playerName, terms } = useLeague();
   const countdown = useEpisodeCountdown(leagueKey);
   const avatars = useAvatars();
   const contestants = root.contestants || [];
@@ -81,7 +81,7 @@ export default function StandingsScreen({ navigation }: Props) {
               theme, so the text can't follow the palette and stay readable. */}
           <Text style={styles.countdownLabel}>{countdown.label.toUpperCase()}</Text>
           <Text style={styles.countdownClock}>{countdown.clock}</Text>
-          <Text style={styles.countdownMeta}>{remaining} of {contestants.length} castaways still in</Text>
+          <Text style={styles.countdownMeta}>{remaining} of {contestants.length} {terms.units} still in</Text>
         </ImageBackground>
       </View>
 
@@ -99,7 +99,7 @@ export default function StandingsScreen({ navigation }: Props) {
       )}
 
       <Text style={styles.sectionTitle}>Standings</Text>
-      <Text style={styles.sectionHint}>Whoever holds the Sole Survivor wins the league.</Text>
+      <Text style={styles.sectionHint}>Whoever holds the {terms.winner} wins the league.</Text>
 
       {ranked.map((p) => {
         // Compared against the team, not the person: a couple sharing a roster

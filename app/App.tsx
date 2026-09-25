@@ -7,8 +7,6 @@ import { useFonts, Anton_400Regular } from '@expo-google-fonts/anton';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import type { RootStackParamList } from './navigation';
 import SplashScreen from './screens/SplashScreen';
-import WhoAreYouScreen from './screens/WhoAreYouScreen';
-import LeaguePasswordScreen from './screens/LeaguePasswordScreen';
 import MainTabs from './screens/MainTabs';
 import DraftScreen from './screens/DraftScreen';
 import BioScreen from './screens/BioScreen';
@@ -18,15 +16,12 @@ import EpisodeManagerScreen from './screens/EpisodeManagerScreen';
 import EpisodeEditorScreen from './screens/EpisodeEditorScreen';
 import TribesScreen from './screens/TribesScreen';
 import EpisodeRecapScreen from './screens/EpisodeRecapScreen';
-import { useIdentity } from './lib/identity';
-import { PREVIEW, previewRoot } from './lib/preview';
-import { useSession } from './lib/session';
 import OnboardingFlow from './screens/onboarding/OnboardingFlow';
-import { leaguesForPerson, type LeagueRecord } from './lib/state';
 import { useLastLeague } from './lib/lastLeague';
+import { useLeagueRoot } from './lib/state';
+import { setActiveSeason } from './lib/season';
+import { logOut, useAuthUser, useIsAdmin, useMyLeagues, useProfile, type MyLeague } from './lib/account';
 import { navigationRef, NotificationRouter } from './lib/notificationRouting';
-import { teamIdFor, useLeagueRoot } from './lib/state';
-import { useLeagueAuth } from './lib/leagueAuth';
 import { useReportAppVersion } from './lib/appVersion';
 import { useAutoUpdate } from './lib/autoUpdate';
 import { useMinClient } from './lib/clients';
@@ -50,125 +45,74 @@ function useMinSplashDelay() {
 }
 
 function RootNavigator() {
-  const { identity, loading: identityLoading, setIdentity, clearIdentity, editorUnlocked, unlockEditor } = useIdentity();
-  const realAuth = useLeagueAuth();
-  // Preview: sign-in is simulated and data comes from the bundled snapshot.
-  const authState = PREVIEW ? 'signed-in' : realAuth;
-  const { session, loading: sessionLoading, save: saveSession } = useSession();
-  const { loading: lastLeagueLoading, lastLeagueFor, saveLastLeague } = useLastLeague();
-  const playerId = identity?.playerId ?? '';
-  const onLeagueChange = useCallback((key: string) => saveLastLeague(playerId, key), [saveLastLeague, playerId]);
+  const { user, loading: authLoading } = useAuthUser();
+  const uid = user?.uid ?? null;
+  const { profile, loading: profileLoading } = useProfile(uid);
+  const { leagues: myLeagues, loading: leaguesLoading } = useMyLeagues(uid);
+  const isAdmin = useIsAdmin(uid);
+  // The league currently open (null = the "your leagues" list). Held here so
+  // the season's data is only read once someone actually opens one.
+  const [open, setOpen] = useState<MyLeague | null>(null);
+  const { loading: lastLoading, lastLeagueFor, saveLastLeague } = useLastLeague();
   // Take any waiting update now rather than leaving it for the next launch.
   useAutoUpdate();
-  // Diagnostics: which build/bundle this device is actually running.
-  useReportAppVersion(identity?.playerId ?? '');
-  // The floor the commissioner has set. Only readable once signed in, which
-  // is also the only point at which being out of date can do any harm.
+  useReportAppVersion(uid ?? '');
   const minClient = useMinClient();
-  // Nothing in the record is readable until we're signed in, so the read only
-  // starts once we are — otherwise it would just fail on permissions.
-  const { root: liveRoot, loading: liveLoading } = useLeagueRoot(authState === 'signed-in' && !PREVIEW);
-  // Preview: leagues you create on this device are added to the snapshot in
-  // memory (you as the only player, draft not started), so they open into the
-  // full app just like a real one would.
-  const root = useMemo(() => {
-    const base = PREVIEW ? previewRoot : liveRoot;
-    if (!base || !PREVIEW || !session?.leagues.length) return base;
-    const extra: Record<string, LeagueRecord> = {};
-    session.leagues.forEach((l) => {
-      extra[l.id] = {
-        name: l.name,
-        picksPerPlayer: 2,
-        players: [{ id: 'matt', name: session.name }],
-        draftState: { started: false, complete: false, currentPickIndex: 0, history: [] },
-        inviteCode: l.code,
-        castPhotos: l.castPhotos,
-      } as LeagueRecord;
-    });
-    return { ...base, leagues: { ...base.leagues, ...extra } };
-  }, [liveRoot, session]);
-  const rootLoading = PREVIEW ? false : liveLoading;
   const minSplashDone = useMinSplashDelay();
 
-  if (authState === 'checking' || identityLoading || lastLeagueLoading || sessionLoading || !minSplashDone) {
+  // Point every data helper at the open league's season BEFORE its data hooks
+  // run (they read the active season when they subscribe).
+  const seasonId = open?.seasonId ?? null;
+  const { root, loading: rootLoading } = useLeagueRoot(!!seasonId, seasonId);
+  const meta = root?.meta ?? null;
+  if (seasonId) setActiveSeason(seasonId, meta);
+
+  // Reopen the league you were last in, once the list has loaded.
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (restored || !uid || leaguesLoading || lastLoading) return;
+    setRestored(true);
+    const last = lastLeagueFor(uid);
+    const hit = myLeagues.find((l) => l.leagueKey === last);
+    if (hit) setOpen(hit);
+  }, [restored, uid, leaguesLoading, lastLoading, myLeagues, lastLeagueFor]);
+
+  if (authLoading || (uid && (profileLoading || lastLoading)) || !minSplashDone) {
     return <SplashScreen />;
   }
 
-  // Sign in, then create / join / open a league. Once someone opens a league
-  // the existing league app below takes over.
-  if (!session || !session.inLeague) {
-    // Preview: the copied leagues, as seen by Matt (the snapshot's commissioner).
-    const created = new Set(session?.leagues.map((l) => l.id));
-    const existing = root
-      ? leaguesForPerson(root, 'matt').filter((key) => !created.has(key)).map((key) => ({
-          key,
-          name: root.leagues[key]?.name ?? key,
-          members: root.leagues[key]?.players?.length ?? 0,
-          showId: 'survivor-51',
-        }))
-      : [];
+  if (!open) {
     return (
       <OnboardingFlow
-        session={session}
-        save={saveSession}
-        existing={existing}
-        onEnterLeague={async (key) => {
-          await setIdentity({ leagueKey: key, playerId: 'matt', playerName: 'Matt' });
-          if (session) saveSession({ ...session, inLeague: true });
-        }}
+        user={user}
+        profile={profile}
+        myLeagues={myLeagues}
+        leaguesLoading={leaguesLoading}
+        isAdmin={isAdmin}
+        onOpenLeague={(l) => { setOpen(l); if (uid) saveLastLeague(uid, l.leagueKey); }}
       />
     );
   }
 
-  // The league password comes before any data.
-  //
-  // Someone returning is greeted by name — their identity is stored on the
-  // device, so we know who they are without reading the roster, which is
-  // itself behind this very sign-in. A first-time install has no name yet and
-  // gets the password first, then picks league and name straight after.
-  if (authState === 'signed-out') {
-    return (
-      <LeaguePasswordScreen
-        name={identity?.playerName ?? null}
-        onBack={identity ? clearIdentity : undefined}
-      />
-    );
-  }
-
-  if (rootLoading || !root) {
+  if (rootLoading || !root || !root.leagues?.[open.leagueKey]) {
     return <SplashScreen />;
   }
 
-  // Hard stop for a build the league has moved past. Deliberately after
-  // sign-in (nothing here is readable before) and before anything else can
-  // be used.
+  // Hard stop for a build the app has moved past.
   if (minClient > CLIENT_VERSION) {
     return <UpdateRequiredScreen required={minClient} mine={CLIENT_VERSION} />;
   }
 
-  // An identity that no longer matches the roster (renamed/removed player)
-  // falls back to the picker rather than a broken half-state.
-  //
-  // Resolved through teamIdFor, NOT by matching roster-entry ids directly:
-  // someone on a shared entry signs in as themselves (`scott`) while the entry
-  // is the couple (`scott-anne`), and a direct comparison rejected them.
-  const valid = !!identity && !!teamIdFor(root.leagues[identity.leagueKey], identity.playerId);
-  if (!identity || !valid) {
-    return <WhoAreYouScreen root={root} current={null} onChoose={setIdentity} />;
-  }
+  const identity = { leagueKey: open.leagueKey, playerId: open.personId, playerName: profile?.name };
 
   return (
     <LeagueProvider
+      key={open.leagueKey}
       root={root}
       identity={identity}
-      initialLeagueKey={lastLeagueFor(identity.playerId)}
-      onLeagueChange={onLeagueChange}
-      editorUnlocked={editorUnlocked}
-      unlockEditor={unlockEditor}
-      setIdentity={setIdentity}
-      clearIdentity={async () => { await clearIdentity(); if (session) saveSession({ ...session, inLeague: false }); }}
-      onExitLeague={() => { if (session) saveSession({ ...session, inLeague: false }); }}
-      onLogOut={async () => { await clearIdentity(); saveSession(null); }}
+      isAdmin={isAdmin}
+      onExitLeague={() => setOpen(null)}
+      onLogOut={() => { setOpen(null); logOut(); }}
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="MainTabs" component={MainTabs} />

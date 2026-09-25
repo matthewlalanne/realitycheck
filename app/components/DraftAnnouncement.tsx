@@ -63,7 +63,7 @@ export default function DraftAnnouncement() {
     seenAt.current = last.at;
     if (Date.now() - last.at > FRESH_MS) return;
 
-    const castName = root.contestants?.find((c) => c?.id === last.contestantId)?.name ?? 'a castaway';
+    const castName = root.contestants?.find((c) => c?.id === last.contestantId)?.name ?? 'a pick';
     const playerName = league.players.find((p) => p.id === last.playerId)?.name ?? last.playerId;
     setShown({ playerName, castName, castId: last.contestantId });
 

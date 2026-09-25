@@ -44,9 +44,9 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Draft'>;
 export default function DraftScreen({ navigation }: Props) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
-  const { root: liveRoot, leagueKey, playerId, teamId, isCommissioner, editorUnlocked } = useLeague();
+  const { root: liveRoot, leagueKey, playerId, teamId, isCommissioner, terms } = useLeague();
   const { practice, root } = useDraftRoot(liveRoot);
-  const canRun = isCommissioner && editorUnlocked;
+  const canRun = isCommissioner;
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
   // Your own board, brought onto the draft floor: your order, your notes.
@@ -345,7 +345,7 @@ export default function DraftScreen({ navigation }: Props) {
           <Panel style={styles.formatCard}>
             <Text style={styles.formatLabel}>THIS LEAGUE'S FORMAT</Text>
             <Text style={styles.formatName}>Shared Draft</Text>
-            <Text style={styles.formatBody}>A castaway can be shared by up to 2 players — everyone gets {league.picksPerPlayer} picks.</Text>
+            <Text style={styles.formatBody}>{(league.maxOwners ?? 2) > 1 ? `A ${terms.unit} can be shared by up to ${league.maxOwners ?? 2} players` : `Each ${terms.unit} goes to one player`} — everyone gets {league.picksPerPlayer} pick{league.picksPerPlayer === 1 ? '' : 's'}.</Text>
           </Panel>
           <Panel style={{ gap: 10 }}>
             <Text style={styles.sectionTitle}>Draft order</Text>
@@ -434,9 +434,9 @@ export default function DraftScreen({ navigation }: Props) {
     if (!turnId) return "The draft isn't running right now.";
     if (!canPick) return `It's ${nameOf(turnId)}'s turn, not yours.`;
     const owners = ownersOf(league!, contestantId);
-    if (owners.includes(turnId)) return 'You already have that castaway.';
+    if (owners.includes(turnId)) return `You already have that ${terms.unit}.`;
     if (owners.length >= 2) return `Taken — ${owners.map(nameOf).join(' & ')} already have them.`;
-    if (owners.length > 0 && draftSlack(root!, league!) <= 0) return 'Down to the wire — only unpicked castaways are available now.';
+    if (owners.length > 0 && draftSlack(root!, league!) <= 0) return `Down to the wire — only unpicked ${terms.units} are available now.`;
     return null;
   };
 
@@ -494,10 +494,10 @@ export default function DraftScreen({ navigation }: Props) {
                 <>
                   <Text style={styles.turnTitle}>On the clock: {turnId ? nameOf(turnId) : '—'}</Text>
                   <Text style={styles.turnBody}>
-                    Pick {(ds.currentPickIndex || 0) + 1} of {seq.length}{locked ? ' — unpicked castaways only now' : ''}
+                    Pick {(ds.currentPickIndex || 0) + 1} of {seq.length}{locked ? ` — unpicked ${terms.units} only now` : ''}
                   </Text>
-                  {iAmOnClock && <Text style={styles.yourTurn}>It's your turn — tap a castaway below.</Text>}
-                  {pickForClock && <Text style={styles.yourTurn}>Practice: tap a castaway to pick for {nameOf(turnId!)}.</Text>}
+                  {iAmOnClock && <Text style={styles.yourTurn}>It's your turn — tap a {terms.unit} below.</Text>}
+                  {pickForClock && <Text style={styles.yourTurn}>Practice: tap a {terms.unit} to pick for {nameOf(turnId!)}.</Text>}
                   {turnId && seq[(ds.currentPickIndex || 0) + 1] && (
                     <Text style={styles.upNext}>Up next: {nameOf(seq[(ds.currentPickIndex || 0) + 1])}</Text>
                   )}

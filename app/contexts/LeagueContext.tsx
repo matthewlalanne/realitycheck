@@ -1,8 +1,8 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { Identity } from '../lib/identity';
-import { EDITOR_IDS } from '../lib/identity';
 import { useRegisterPushToken } from '../lib/push';
-import { leaguesForPerson, personNameIn, teamIdFor, type LeagueRecord, type LeagueRoot } from '../lib/state';
+import { personNameIn, teamIdFor, type LeagueRecord, type LeagueRoot } from '../lib/state';
+import { termsFor, type Terms } from '../lib/season';
 
 type LeagueContextValue = {
   root: LeagueRoot;
@@ -20,12 +20,12 @@ type LeagueContextValue = {
   teamId: string;
   teamName: string;
   identity: Identity;
-  /** Commissioner rights are per-league: Courtney runs Denver only. */
+  /** Commissioner rights are per-league: whoever created it, plus anyone they add. */
   isCommissioner: boolean;
-  editorUnlocked: boolean;
-  unlockEditor: (password: string) => Promise<boolean>;
-  setIdentity: (id: Identity) => Promise<void>;
-  clearIdentity: () => Promise<void>;
+  /** Matt: enters each season's results once for every league (admins/<uid> in the database). */
+  isAdmin: boolean;
+  /** Show-specific wording and feature switches (castaway vs team, tribes, idols). */
+  terms: Terms;
   /** Back to the list of all your leagues (create / join lives there). */
   onExitLeague?: () => void;
   /** Log out of the account entirely. */
@@ -47,10 +47,7 @@ export function LeagueProvider({
   identity,
   initialLeagueKey,
   onLeagueChange,
-  editorUnlocked,
-  unlockEditor,
-  setIdentity,
-  clearIdentity,
+  isAdmin,
   onExitLeague,
   onLogOut,
   children,
@@ -60,27 +57,19 @@ export function LeagueProvider({
   /** The league last viewed on this device, if any — restored on launch. */
   initialLeagueKey?: string | null;
   onLeagueChange?: (key: string) => void;
-  editorUnlocked: boolean;
-  unlockEditor: (password: string) => Promise<boolean>;
-  setIdentity: (id: Identity) => Promise<void>;
-  clearIdentity: () => Promise<void>;
+  isAdmin: boolean;
   onExitLeague?: () => void;
   onLogOut?: () => void;
   children: React.ReactNode;
 }) {
-  const [viewKey, setViewKey] = useState(initialLeagueKey || identity.leagueKey);
+  const [viewKey, setViewKey] = useState(identity.leagueKey);
   const setLeagueKey = useCallback((key: string) => {
     setViewKey(key);
     onLeagueChange?.(key);
   }, [onLeagueChange]);
 
-  // Your leagues are simply the ones you're on a roster in — directly, or as a
-  // member of a team entry. Everyone gets exactly the leagues they play in
-  // rather than an all-or-nothing "dual league" flag.
-  const myLeagueKeys = useMemo(() => {
-    const keys = leaguesForPerson(root, identity.playerId);
-    return keys.length ? keys : [identity.leagueKey];
-  }, [root, identity.playerId, identity.leagueKey]);
+  // One league is open at a time; "All leagues" in the header goes back to the list.
+  const myLeagueKeys = useMemo(() => [identity.leagueKey], [identity.leagueKey]);
 
   // Falling back rather than syncing in an effect keeps this correct on the
   // first render after switching player, with no flash of the wrong league.
@@ -108,11 +97,9 @@ export function LeagueProvider({
         teamId,
         teamName,
         identity,
-        isCommissioner: !!EDITOR_IDS[leagueKey]?.includes(identity.playerId),
-        editorUnlocked,
-        unlockEditor,
-        setIdentity,
-        clearIdentity,
+        isCommissioner: !!league?.commissionerIds?.includes(identity.playerId),
+        isAdmin,
+        terms: termsFor(root.meta),
         onExitLeague,
         onLogOut,
       }}

@@ -1,57 +1,42 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
-import { Image, Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import type { ColorScheme } from '../../theme';
-import { findSeason, seasonLabel } from '../../lib/shows';
-import type { CreatedLeague, Session } from '../../lib/session';
+import { joinLeague, type MyLeague } from '../../lib/account';
 import { Screen, Note, Label, makeStyles as uiStyles } from './ui';
 
 // The placeholder domain until the real name is settled (PUBLIC_LAUNCH.md §5).
 const JOIN_BASE = 'playrealitycheck.web.app/join/';
 
-export type ExistingLeague = { key: string; name: string; members: number; showId: string };
 
 // ---- Your leagues ----------------------------------------------------------
 
 export function LeaguesHome({
-  session, existing, onOpenExisting, onOpenCreated, onCreate, onJoin, onSignOut,
+  name, leagues, loading, onOpen, onCreate, onJoin, onSignOut,
 }: {
-  session: Session;
-  existing: ExistingLeague[];
-  onOpenExisting: (key: string) => void;
-  onOpenCreated: (l: CreatedLeague) => void;
+  name: string;
+  leagues: MyLeague[];
+  loading: boolean;
+  onOpen: (l: MyLeague) => void;
   onCreate: () => void;
   onJoin: () => void;
   onSignOut: () => void;
 }) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
-  const showName = seasonLabel;
-  const none = !existing.length && !session.leagues.length;
   return (
     <Screen
-      title={`Hi, ${session.name}`}
-      subtitle={none ? 'Start a league for your group, or join one with a code.' : 'Your leagues'}
+      title={`Hi, ${name}`}
+      subtitle={!leagues.length && !loading ? 'Start a league for your group, or join one with a code.' : 'Your leagues'}
       secondary={{ label: 'Sign out', onPress: onSignOut }}
     >
-      {existing.map((l) => (
-        <Pressable key={l.key} style={styles.leagueCard} onPress={() => onOpenExisting(l.key)}>
+      {leagues.map((l) => (
+        <Pressable key={l.leagueKey} style={styles.leagueCard} onPress={() => onOpen(l)}>
           <View style={styles.leagueIcon}><Ionicons name="flame" size={20} color={colors.onAccent} /></View>
           <View style={{ flex: 1 }}>
             <Text style={styles.leagueName}>{l.name}</Text>
-            <Text style={styles.leagueMeta}>{showName(l.showId)} · {l.members} players</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-        </Pressable>
-      ))}
-      {session.leagues.map((l) => (
-        <Pressable key={l.id} style={styles.leagueCard} onPress={() => onOpenCreated(l)}>
-          <View style={[styles.leagueIcon, { backgroundColor: colors.accent2 }]}><Ionicons name="hourglass" size={18} color={colors.onAccent} /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.leagueName}>{l.name}</Text>
-            <Text style={styles.leagueMeta}>{showName(l.showId)} · waiting for players</Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
         </Pressable>
@@ -75,17 +60,61 @@ export function LeaguesHome({
 
 // ---- Join with a code --------------------------------------------------------
 
-export function JoinScreen({ onBack }: { onBack: () => void }) {
+export function JoinScreen({
+  playerName, initialCode, onBack, onJoined,
+}: {
+  playerName: string;
+  initialCode?: string;
+  onBack: () => void;
+  onJoined: (l: MyLeague) => void;
+}) {
   const colors = useThemeColors();
   const ui = uiStyles(colors);
-  const [code, setCode] = useState('');
-  const [tried, setTried] = useState(false);
+  const styles = makeStyles(colors);
+  const [code, setCode] = useState((initialCode ?? '').toUpperCase());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [choose, setChoose] = useState<{ name: string; open: { id: string; name: string }[] } | null>(null);
+
+  const go = async (claimId?: string) => {
+    setBusy(true); setError(null);
+    try {
+      const r = await joinLeague(code, playerName, claimId);
+      if (r.status === 'choose') { setChoose({ name: r.name, open: r.open }); return; }
+      onJoined({ seasonId: r.seasonId, leagueKey: r.leagueKey, name: r.name, personId: r.personId });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (choose) {
+    return (
+      <Screen
+        title={`Which one are you?`}
+        subtitle={`${choose.name} already has players. Pick yourself to take over your picks and history.`}
+        onBack={() => setChoose(null)}
+        secondary={{ label: "I'm not on the list", onPress: () => go('new') }}
+      >
+        {choose.open.map((p) => (
+          <Pressable key={p.id} style={styles.leagueCard} onPress={() => go(p.id)} disabled={busy}>
+            <View style={styles.leagueIcon}><Text style={{ color: colors.onAccent, fontWeight: '800' }}>{p.name.slice(0, 1).toUpperCase()}</Text></View>
+            <Text style={[styles.leagueName, { flex: 1 }]}>{p.name}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+          </Pressable>
+        ))}
+        {!!error && <Note tone="warn">{error}</Note>}
+      </Screen>
+    );
+  }
+
   return (
     <Screen
       title="Join a league"
       subtitle="Enter the 6-letter code from your commissioner. Tapping their invite link does this for you."
       onBack={onBack}
-      primary={{ label: 'Join', onPress: () => setTried(true), disabled: code.length !== 6 }}
+      primary={{ label: busy ? 'Joining…' : 'Join', onPress: () => go(), disabled: code.length !== 6 || busy }}
     >
       <TextInput
         style={[ui.input, { fontSize: 26, letterSpacing: 8, textAlign: 'center', fontWeight: '800' }]}
@@ -97,22 +126,20 @@ export function JoinScreen({ onBack }: { onBack: () => void }) {
         autoCorrect={false}
         autoFocus
       />
-      {tried && <Note>Preview: joining by code needs the live server, which isn't switched on yet.</Note>}
+      {!!error && <Note tone="warn">{error}</Note>}
     </Screen>
   );
 }
 
 // ---- Invite (right after creating) -------------------------------------------
 
-export function InviteScreen({ league, onDone }: { league: CreatedLeague; onDone: () => void }) {
-  const colors = useThemeColors();
-  const styles = makeStyles(colors);
+export function InviteScreen({ league, onDone }: { league: { name: string; code: string }; onDone: () => void }) {
   const link = `https://${JOIN_BASE}${league.code}`;
-  const share = () => Share.share({ message: `Join my ${findSeason(league.showId)?.show.name ?? ''} fantasy league “${league.name}” on Reality Check: ${link}` });
+  const share = () => Share.share({ message: `Join my fantasy league “${league.name}” on Reality Check: ${link} (code ${league.code})` });
   return (
     <Screen
       title={`${league.name} is ready`}
-      subtitle="Send your group the link. Tapping it installs the app if they need it, then drops them straight into your league."
+      subtitle="Send your group the link or the code. They join from inside the app."
       primary={{ label: 'Share invite link', onPress: share }}
       secondary={{ label: 'Go to my league', onPress: onDone }}
     >
@@ -146,49 +173,6 @@ export function CopyableCode({ code, link }: { code: string; link: string }) {
       </Pressable>
       {!!copied && <Text style={styles.copiedText}>{copied === 'code' ? 'Code' : 'Link'} copied</Text>}
     </View>
-  );
-}
-
-// ---- Lobby (a new league before its draft) -----------------------------------
-
-export function LobbyScreen({ league, me, photo, onBack }: { league: CreatedLeague; me: string; photo?: string | null; onBack: () => void }) {
-  const colors = useThemeColors();
-  const styles = makeStyles(colors);
-  const show = findSeason(league.showId)?.show;
-  const seasonName = findSeason(league.showId)?.season.label;
-  const draftLine = league.draft === 'offline' ? 'Enter your picks' : `${league.draft === 'live' ? 'Live draft' : 'Auto draft'} · ${league.draftAt ? new Date(league.draftAt).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit', timeZoneName: 'short' }) : 'time TBD'}`;
-  const share = () => Share.share({ message: `Join “${league.name}” on Reality Check: https://${JOIN_BASE}${league.code}` });
-  return (
-    <Screen
-      title={league.name}
-      subtitle={`${show?.name ?? ''}${seasonName ? ` · ${seasonName}` : ''} · ${league.style === 'points' ? 'Points' : 'Last one standing'}`}
-      onBack={onBack}
-      primary={{ label: 'Invite players', onPress: share }}
-    >
-      <View style={styles.draftCard}>
-        <Ionicons name="calendar" size={22} color={colors.accent} />
-        <View style={{ flex: 1 }}>
-          <Text style={styles.draftTitle}>{draftLine}</Text>
-          <Text style={styles.draftSub}>Everyone ranks the cast on My board before the draft. That ranking is their auto-pick list.</Text>
-        </View>
-      </View>
-
-      <Label>Players · 1 joined</Label>
-      <View style={styles.memberRow}>
-        {photo ? <Image source={{ uri: photo }} style={styles.memberAvatar} /> : (
-          <View style={[styles.memberAvatar, { backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={{ color: colors.onAccent, fontWeight: '800' }}>{me.slice(0, 1).toUpperCase()}</Text>
-          </View>
-        )}
-        <Text style={styles.memberName}>{me}</Text>
-        <Text style={styles.commish}>COMMISSIONER</Text>
-      </View>
-      <View style={[styles.memberRow, { opacity: 0.55 }]}>
-        <View style={[styles.memberAvatar, styles.memberEmpty]}><Ionicons name="person-add" size={16} color={colors.textDim} /></View>
-        <Text style={styles.memberName}>Waiting for your group…</Text>
-      </View>
-      <Note>League code {league.code}. Share it, or tap Invite players.</Note>
-    </Screen>
   );
 }
 

@@ -59,40 +59,186 @@
       ".write": false
     },
     "league": {
+      // Outlast's original single-season record, copied in once. Read-only
+      // now; the migration script moves it into seasons/survivor-51.
       ".read": "auth != null",
-      ".write": "auth != null && newData.exists()",
-      ".validate": "newData.hasChildren(['leagues', 'contestants'])",
-      "leagues": {
-        ".validate": "newData.hasChildren(['porterville', 'denver', 'coloradoSprings'])",
-        "$lg": {
-          ".validate": "newData.hasChildren(['name', 'players'])",
-          "name": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
-          },
-          "picksPerPlayer": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30"
-          },
-          "players": {
-            ".validate": "newData.hasChildren()",
-            "$i": {
-              ".validate": "newData.hasChildren(['id', 'name'])",
-              "id": {
+      ".write": false
+    },
+    "seasons": {
+      // One record per show season: cast, schedule, results, and the leagues
+      // playing it. Results are entered once, by an admin, for every league.
+      ".read": "auth != null",
+      "$season": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        "leagues": {
+          "$lg": {
+            // Members play their own league (picks, draft, settings). Leagues are
+            // created and joined only through Cloud Functions, which bypass these.
+            ".write": "auth != null && data.child('memberIds').child(auth.uid).exists()",
+            ".validate": "newData.hasChildren(['name', 'players'])",
+            "memberIds": {
+              "$uid": { ".validate": "data.exists() && newData.val() === data.val()" }
+            },
+            "commissionerIds": {
+              "$i": { ".validate": "data.exists() && newData.val() === data.val()" }
+            },
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+            },
+            "picksPerPlayer": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30"
+            },
+            "players": {
+              ".validate": "newData.hasChildren()",
+              "$i": {
+                ".validate": "newData.hasChildren(['id', 'name'])",
+                "id": {
+                  ".validate": "newData.isString() && newData.val().length <= 60"
+                },
+                "name": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+                },
+                "members": {
+                  "$m": {
+                    ".validate": "newData.hasChildren(['id', 'name'])",
+                    "id": {
+                      ".validate": "newData.isString() && newData.val().length <= 60"
+                    },
+                    "name": {
+                      ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            },
+            "picks": {
+              "$contestantId": {
+                "$owner": {
+                  ".validate": "newData.isString() && newData.val().length <= 60"
+                }
+              }
+            },
+            "pickOrder": {
+              "$i": {
+                ".validate": "newData.isString() && newData.val().length <= 60"
+              }
+            }
+          }
+        },
+        "contestants": {
+          ".validate": "newData.hasChildren()",
+          "$i": {
+            "id": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
+            },
+            "eliminatedWeek": {
+              ".validate": "newData.isNumber() || newData.val() == null"
+            },
+            "exitReason": {
+              ".validate": "newData.val() === 'voted' || newData.val() === 'quit'"
+            },
+            "tribe": {
+              ".validate": "newData.isString() && newData.val().length <= 60"
+            },
+            "items": {
+              "$itemId": {
+                ".validate": "$itemId.length <= 40 && newData.hasChildren(['kind', 'ep'])",
+                "kind": {
+                  ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
+                },
+                "ep": {
+                  ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 40"
+                },
+                "$other": {
+                  ".validate": false
+                }
+              }
+            }
+          }
+        },
+        "episodeTitles": {
+          "$ep": {
+            ".validate": "$ep.length <= 3 && newData.isString() && newData.val().length <= 80"
+          }
+        },
+        "episodeStats": {
+          "$ep": {
+            ".validate": "$ep.length <= 3",
+            "$cid": {
+              ".validate": "$cid.length <= 60",
+              "immunity": { ".validate": "newData.isBoolean()" },
+              "reward": { ".validate": "newData.isBoolean()" },
+              "journey": { ".validate": "newData.isBoolean()" },
+              "idolFound": { ".validate": "newData.isBoolean()" },
+              "idolPlay": { ".validate": "newData.val() === 'saved' || newData.val() === 'wasted'" },
+              "votes": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30" },
+              "$other": { ".validate": false }
+            }
+          }
+        },
+        "game": {
+          "mergeEp": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 40" },
+          "juryEp": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 40" },
+          "$other": { ".validate": false }
+        },
+        "tribes": {
+          "$tribeId": {
+            ".validate": "$tribeId.length <= 60 && newData.hasChildren(['name', 'color'])",
+            "name": {
+              ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
+            },
+            "color": {
+              ".validate": "newData.isString() && newData.val().matches(/^#[0-9A-Fa-f]{6}$/)"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "messages": {
+          "$lg": {
+            ".write": "auth != null && root.child('seasons').child($season).child('leagues').child($lg).child('memberIds').child(auth.uid).exists()",
+            "$id": {
+              ".validate": "newData.hasChildren(['authorId', 'text', 'createdAt'])",
+              "authorId": {
                 ".validate": "newData.isString() && newData.val().length <= 60"
               },
-              "name": {
-                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+              "authorName": {
+                ".validate": "newData.isString() && newData.val().length <= 60"
               },
-              "members": {
-                "$m": {
-                  ".validate": "newData.hasChildren(['id', 'name'])",
-                  "id": {
-                    ".validate": "newData.isString() && newData.val().length <= 60"
-                  },
-                  "name": {
-                    ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
-                  },
-                  "$other": {
-                    ".validate": false
+              "text": {
+                ".validate": "newData.isString() && newData.val().length <= 1000 && (newData.val().length > 0 || newData.parent().child('gif').exists())"
+              },
+              "gif": {
+                ".validate": "newData.hasChildren(['url'])",
+                "url": {
+                  ".validate": "newData.isString() && newData.val().beginsWith('https://') && newData.val().length <= 500"
+                },
+                "preview": {
+                  ".validate": "newData.isString() && newData.val().beginsWith('https://') && newData.val().length <= 500"
+                },
+                "width": { ".validate": "newData.isNumber()" },
+                "height": { ".validate": "newData.isNumber()" },
+                "title": { ".validate": "newData.isString() && newData.val().length <= 100" },
+                "$other": { ".validate": false }
+              },
+              "createdAt": {
+                ".validate": "newData.isNumber()"
+              },
+              "reactions": {
+                "$emoji": {
+                  ".validate": "$emoji.length <= 16",
+                  "$playerId": {
+                    ".validate": "newData.isBoolean()"
                   }
                 }
               },
@@ -100,184 +246,80 @@
                 ".validate": false
               }
             }
-          },
-          "picks": {
-            "$contestantId": {
-              "$owner": {
+          }
+        },
+        "predictions": {
+          "$lg": {
+            ".write": "auth != null && root.child('seasons').child($season).child('leagues').child($lg).child('memberIds').child(auth.uid).exists()",
+            "$ep": {
+              "$playerId": {
                 ".validate": "newData.isString() && newData.val().length <= 60"
               }
             }
-          },
-          "pickOrder": {
-            "$i": {
-              ".validate": "newData.isString() && newData.val().length <= 60"
-            }
           }
-        }
-      },
-      "contestants": {
-        ".validate": "newData.hasChildren()",
-        "$i": {
-          "id": {
-            ".validate": "newData.isString() && newData.val().length <= 60"
-          },
-          "name": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 120"
-          },
-          "eliminatedWeek": {
-            ".validate": "newData.isNumber() || newData.val() == null"
-          },
-          "exitReason": {
-            ".validate": "newData.val() === 'voted' || newData.val() === 'quit'"
-          },
-          "tribe": {
-            ".validate": "newData.isString() && newData.val().length <= 60"
-          },
-          "items": {
-            "$itemId": {
-              ".validate": "$itemId.length <= 40 && newData.hasChildren(['kind', 'ep'])",
-              "kind": {
-                ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
-              },
-              "ep": {
-                ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 40"
-              },
-              "$other": {
-                ".validate": false
-              }
-            }
-          }
-        }
-      },
-      "episodeTitles": {
-        "$ep": {
-          ".validate": "$ep.length <= 3 && newData.isString() && newData.val().length <= 80"
-        }
-      },
-      "episodeStats": {
-        "$ep": {
-          ".validate": "$ep.length <= 3",
-          "$cid": {
-            ".validate": "$cid.length <= 60",
-            "immunity": { ".validate": "newData.isBoolean()" },
-            "reward": { ".validate": "newData.isBoolean()" },
-            "journey": { ".validate": "newData.isBoolean()" },
-            "idolFound": { ".validate": "newData.isBoolean()" },
-            "idolPlay": { ".validate": "newData.val() === 'saved' || newData.val() === 'wasted'" },
-            "votes": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30" },
-            "$other": { ".validate": false }
-          }
-        }
-      },
-      "game": {
-        "mergeEp": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 40" },
-        "juryEp": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 40" },
-        "$other": { ".validate": false }
-      },
-      "tribes": {
-        "$tribeId": {
-          ".validate": "$tribeId.length <= 60 && newData.hasChildren(['name', 'color'])",
-          "name": {
-            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30"
-          },
-          "color": {
-            ".validate": "newData.isString() && newData.val().matches(/^#[0-9A-Fa-f]{6}$/)"
-          },
-          "$other": {
-            ".validate": false
-          }
-        }
-      },
-      "messages": {
-        "$lg": {
-          "$id": {
-            ".validate": "newData.hasChildren(['authorId', 'text', 'createdAt'])",
-            "authorId": {
-              ".validate": "newData.isString() && newData.val().length <= 60"
-            },
-            "authorName": {
-              ".validate": "newData.isString() && newData.val().length <= 60"
-            },
-            "text": {
-              ".validate": "newData.isString() && newData.val().length <= 1000 && (newData.val().length > 0 || newData.parent().child('gif').exists())"
-            },
-            "gif": {
-              ".validate": "newData.hasChildren(['url'])",
-              "url": {
-                ".validate": "newData.isString() && newData.val().beginsWith('https://') && newData.val().length <= 500"
-              },
-              "preview": {
-                ".validate": "newData.isString() && newData.val().beginsWith('https://') && newData.val().length <= 500"
-              },
-              "width": { ".validate": "newData.isNumber()" },
-              "height": { ".validate": "newData.isNumber()" },
-              "title": { ".validate": "newData.isString() && newData.val().length <= 100" },
-              "$other": { ".validate": false }
-            },
-            "createdAt": {
-              ".validate": "newData.isNumber()"
-            },
-            "reactions": {
-              "$emoji": {
-                ".validate": "$emoji.length <= 16",
-                "$playerId": {
-                  ".validate": "newData.isBoolean()"
-                }
-              }
-            },
-            "$other": {
-              ".validate": false
-            }
-          }
-        }
-      },
-      "predictions": {
-        "$lg": {
-          "$ep": {
+        },
+        "winnerPicks": {
+          "$lg": {
+            ".write": "auth != null && root.child('seasons').child($season).child('leagues').child($lg).child('memberIds').child(auth.uid).exists()",
             "$playerId": {
               ".validate": "newData.isString() && newData.val().length <= 60"
             }
           }
-        }
-      },
-      "winnerPicks": {
-        "$lg": {
-          "$playerId": {
-            ".validate": "newData.isString() && newData.val().length <= 60"
+        },
+        "episodeNotes": {
+          "$week": {
+            ".validate": "newData.isString() && newData.val().length <= 5000"
           }
-        }
-      },
-      "episodeNotes": {
-        "$week": {
-          ".validate": "newData.isString() && newData.val().length <= 5000"
-        }
-      },
-      "announcements": {
-        "$id": {
-          "type": {
-            ".validate": "newData.isString() && newData.val().length <= 30"
-          },
-          "week": {
-            ".validate": "newData.isNumber()"
-          },
-          "at": {
-            ".validate": "newData.isNumber()"
+        },
+        "announcements": {
+          "$id": {
+            "type": {
+              ".validate": "newData.isString() && newData.val().length <= 30"
+            },
+            "week": {
+              ".validate": "newData.isNumber()"
+            },
+            "at": {
+              ".validate": "newData.isNumber()"
+            }
           }
-        }
-      },
-      "season": {
-        ".validate": "newData.isNumber()"
-      },
-      "week": {
-        ".validate": "newData.isNumber()"
-      },
-      "title": {
-        ".validate": "newData.isString() && newData.val().length <= 120"
-      },
-      "draftPractice": {
-        ".validate": "newData.isBoolean()"
+        },
+        "season": {
+          ".validate": "newData.isNumber()"
+        },
+        "week": {
+          ".validate": "newData.isNumber()"
+        },
+        "title": {
+          ".validate": "newData.isString() && newData.val().length <= 120"
+        },
+        "draftPractice": {
+          ".validate": "newData.isBoolean()"
+        },
+        "puzzleScores": { ".write": "auth != null" },
+        "memoryScores": { ".write": "auth != null" }
       }
     },
+    "seasonCatalog": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+    "admins": {
+      "$uid": { ".read": "auth != null && auth.uid === $uid" }
+    },
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 40" },
+        "photo": { ".validate": "newData.isString() && newData.val().length < 120000" },
+        "$other": { ".validate": false }
+      }
+    },
+    "userLeagues": {
+      "$uid": { ".read": "auth != null && auth.uid === $uid" }
+    },
+    "inviteCodes": { ".read": false, ".write": false },
     "rehearsal": {
       ".read": "auth != null",
       ".write": "auth != null",

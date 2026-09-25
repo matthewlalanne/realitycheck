@@ -14,7 +14,6 @@ import { THEME_OPTIONS } from '../../theme';
 import Panel from '../../components/Panel';
 import { PinnedHeader, CONTENT_TOP_GAP } from '../../components/ScreenHeader';
 import { useLeague } from '../../contexts/LeagueContext';
-import { EDITOR_IDS } from '../../lib/identity';
 import { signOutOfLeague } from '../../lib/leagueAuth';
 import { clearMessages, draftDone } from '../../lib/state';
 import { CopyableCode } from '../onboarding/LeagueScreens';
@@ -41,7 +40,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
   const { mode, resolvedMode, theme, setMode, setTheme } = useTheme();
-  const { root, league, leagueKey, playerId, teamId, playerName, isCommissioner, editorUnlocked, unlockEditor, clearIdentity, onLogOut } = useLeague();
+  const { root, league, leagueKey, playerId, teamId, playerName, isCommissioner, isAdmin, terms, onLogOut } = useLeague();
   const avatars = useAvatars();
   // Your photo is yours, not the league's — set it once and it follows you
   // into every league you play in.
@@ -62,16 +61,9 @@ export default function SettingsScreen({ navigation }: Props) {
       setUpdateState('error');
     }
   }
-  const [askPassword, setAskPassword] = useState(false);
-
-  const commissionerNames = (EDITOR_IDS[leagueKey] || [])
+  const commissionerNames = (league.commissionerIds || [])
     .map((id) => league.players.find((p) => p.id === id)?.name ?? id)
     .join(' & ');
-
-  function requireEditor(then: () => void) {
-    if (editorUnlocked) then();
-    else setAskPassword(true);
-  }
 
   return (
     <View style={styles.container}>
@@ -199,31 +191,33 @@ export default function SettingsScreen({ navigation }: Props) {
       {isCommissioner && (
         <Panel style={[styles.section, styles.commissionerPanel]}>
           <Text style={styles.sectionTitle}>Commissioner Tools</Text>
-          <Text style={styles.commissionerHint}>
-            {editorUnlocked ? 'Unlocked on this device.' : 'Enter the editor password once to unlock these on this device.'}
-          </Text>
-          <SettingsAction label="Manage episodes & eliminations" onPress={() => requireEditor(() => navigation.navigate('EpisodeManager'))} />
-          <SettingsAction label="Tribe names & colors" onPress={() => requireEditor(() => navigation.navigate('Tribes'))} />
           <SettingsAction
             label={draftDone(league) ? 'Manage the draft' : 'Set draft order & start draft'}
-            onPress={() => requireEditor(() => navigation.navigate('Draft'))}
+            onPress={() => navigation.navigate('Draft')}
           />
           <SettingsAction
             label={`Delete all ${league.name} chat messages`}
             destructive
             onPress={() =>
-              requireEditor(() =>
-                Alert.alert(
-                  `Delete every message in ${league.name}?`,
-                  "This clears the whole league's chat for everyone, on the app and the website. It can't be undone.",
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete all', style: 'destructive', onPress: () => clearMessages(leagueKey) },
-                  ],
-                ),
+              Alert.alert(
+                `Delete every message in ${league.name}?`,
+                "This clears the whole league's chat for everyone. It can't be undone.",
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Delete all', style: 'destructive', onPress: () => clearMessages(leagueKey) },
+                ],
               )
             }
           />
+        </Panel>
+      )}
+
+      {isAdmin && (
+        <Panel style={[styles.section, styles.commissionerPanel]}>
+          <Text style={styles.sectionTitle}>Show admin</Text>
+          <Text style={styles.commissionerHint}>Results you enter here update every league on this season.</Text>
+          <SettingsAction label="Manage episodes & eliminations" onPress={() => navigation.navigate('EpisodeManager')} />
+          {terms.hasTribes && <SettingsAction label="Tribe names & colors" onPress={() => navigation.navigate('Tribes')} />}
         </Panel>
       )}
 
@@ -258,7 +252,7 @@ export default function SettingsScreen({ navigation }: Props) {
             {
               text: 'Log out',
               style: 'destructive',
-              onPress: async () => { if (onLogOut) onLogOut(); else { await clearIdentity(); await signOutOfLeague(); } },
+              onPress: () => { onLogOut?.(); },
             },
           ])
         }
@@ -267,58 +261,8 @@ export default function SettingsScreen({ navigation }: Props) {
       </Pressable>
 
 
-      <PasswordModal
-        visible={askPassword}
-        onClose={() => setAskPassword(false)}
-        onSubmit={async (pw) => {
-          const ok = await unlockEditor(pw);
-          if (ok) setAskPassword(false);
-          return ok;
-        }}
-      />
       </ScrollView>
     </View>
-  );
-}
-
-function PasswordModal({ visible, onClose, onSubmit }: { visible: boolean; onClose: () => void; onSubmit: (pw: string) => Promise<boolean> }) {
-  const colors = useThemeColors();
-  const styles = makeStyles(colors);
-  const [pw, setPw] = useState('');
-  const [error, setError] = useState('');
-  async function submit() {
-    const ok = await onSubmit(pw);
-    if (!ok) setError('Wrong password.');
-    else { setPw(''); setError(''); }
-  }
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalTitle}>Editor Access</Text>
-          <Text style={styles.modalLabel}>Editor password</Text>
-          <TextInput
-            style={styles.modalInput}
-            value={pw}
-            onChangeText={setPw}
-            placeholder="Password"
-            placeholderTextColor={colors.textDim}
-            secureTextEntry
-            autoCapitalize="none"
-            onSubmitEditing={submit}
-          />
-          {!!error && <Text style={styles.modalError}>{error}</Text>}
-          <View style={styles.modalRow}>
-            <Pressable style={styles.modalCancel} onPress={() => { setPw(''); setError(''); onClose(); }}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </Pressable>
-            <Pressable style={[styles.modalSave, !pw && styles.modalSaveDisabled]} disabled={!pw} onPress={submit}>
-              <Text style={styles.modalSaveText}>Unlock</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 }
 

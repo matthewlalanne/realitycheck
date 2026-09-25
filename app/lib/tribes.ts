@@ -1,5 +1,6 @@
 import { ref, update } from 'firebase/database';
 import { rtdb } from './firebase';
+import { seasonPath } from './season';
 import { LIMITS, clamp } from './limits';
 import type { LeagueRoot, Tribe } from './state';
 
@@ -39,7 +40,7 @@ export function tribeOf(root: LeagueRoot, contestantId: string): TribeEntry | nu
 }
 
 export function saveTribe(id: string, tribe: Tribe) {
-  return update(ref(rtdb, 'league'), {
+  return update(ref(rtdb, seasonPath()), {
     [`tribes/${id}`]: { name: clamp(tribe.name.trim() || 'Tribe', LIMITS.tribeName), color: tribe.color },
   });
 }
@@ -57,7 +58,7 @@ export function removeTribe(root: LeagueRoot, id: string) {
   (root.contestants ?? []).forEach((c, i) => {
     if (c && c.tribe === id) patch[`contestants/${i}/tribe`] = null;
   });
-  return update(ref(rtdb, 'league'), patch);
+  return update(ref(rtdb, seasonPath()), patch);
 }
 
 // Writes only that castaway's own field, found by array index — never the
@@ -65,7 +66,7 @@ export function removeTribe(root: LeagueRoot, id: string) {
 export function setContestantTribe(root: LeagueRoot, contestantId: string, tribeId: string | null) {
   const idx = (root.contestants ?? []).findIndex((c) => c && c.id === contestantId);
   if (idx < 0) return Promise.resolve();
-  return update(ref(rtdb, 'league'), { [`contestants/${idx}/tribe`]: tribeId });
+  return update(ref(rtdb, seasonPath()), { [`contestants/${idx}/tribe`]: tribeId });
 }
 
 // Dark text on light buffs (yellow), white on dark ones (purple).

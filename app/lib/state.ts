@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { get, onValue, push, ref, runTransaction, set, update } from 'firebase/database';
 import { rtdb } from './firebase';
 import { LIMITS, clamp } from './limits';
+import { seasonPath, type SeasonMeta } from './season';
 
 // The app is a native client of the SAME Realtime Database record the
 // website runs on (`league`). One source of truth: a prediction locked in on
@@ -11,7 +12,8 @@ import { LIMITS, clamp } from './limits';
 // Writes are always targeted `update()`s or transactions on specific child
 // paths — never a whole-record overwrite — so the app can't clobber anything
 // the website keeps in that record.
-const ROOT = 'league';
+// Every read/write targets the season of the league that's open — see lib/season.ts.
+const root_ = () => seasonPath();
 
 /** One person who can sign in. Their id is what identifies them everywhere. */
 export type PlayerMember = { id: string; name: string };
@@ -41,14 +43,27 @@ export type LeagueRecord = {
   pickOrder?: string[];
   draftState?: DraftState;
   players: Player[];
-  /** Tribe League: the 6-character join code for this league. */
+  /** The 6-character join code for this league. */
   inviteCode?: string;
+  /** Firebase uid -> the person id they play as in this league (a uid for new
+   *  leagues; an existing roster id when someone claimed a copied player). */
+  memberIds?: Record<string, string>;
+  /** Person ids who run this league (draft setup, invite, photos). */
+  commissionerIds?: string[];
+  /** How many people may own the same pick (1 = no sharing). Default 2. */
+  maxOwners?: number;
+  /** 'last-standing' (default) or 'points'. */
+  style?: 'last-standing' | 'points';
+  /** Draft start, ISO. */
+  draftAt?: string | null;
+  /** How the draft runs: live in the app, or the commissioner enters picks. */
+  draftMode?: 'live' | 'auto' | 'offline';
   /** Castaway photos this league uploaded (castaway id -> image URL). Only this league sees them. */
   castPhotos?: Record<string, string>;
   picks?: Record<string, string[] | string>;
 };
 export type RemoteContestant = {
-  id: string; name: string; eliminatedWeek?: number | null; tribe?: string | null;
+  id: string; name: string; age?: number; from?: string; detail?: string; eliminatedWeek?: number | null; tribe?: string | null;
   /** How they left, only meaningful once eliminatedWeek is set. Defaults to 'voted' if absent. */
   exitReason?: 'voted' | 'quit';
   /** Idols/advantages currently held — see lib/advantages.ts. */
@@ -69,6 +84,8 @@ export type ChatMessage = {
   gif?: ChatGif;
 };
 export type LeagueRoot = {
+  /** Show/season description, schedule and features — see lib/season.ts. */
+  meta?: SeasonMeta;
   week?: number;
   episodeNotes?: Record<string, string>;
   leagues: Record<string, LeagueRecord>;
@@ -144,14 +161,15 @@ export function leaguesForPerson(root: LeagueRoot, personId: string): string[] {
  * readable before that, so subscribing early would only produce a permission
  * error. Flipping it to true after sign-in starts the listener for real.
  */
-export function useLeagueRoot(enabled = true): { root: LeagueRoot | null; loading: boolean } {
+export function useLeagueRoot(enabled = true, seasonId?: string | null): { root: LeagueRoot | null; loading: boolean } {
   const [root, setRoot] = useState<LeagueRoot | null>(null);
   useEffect(() => {
-    if (!enabled) return;
-    return onValue(ref(rtdb, ROOT), (snap) => {
+    setRoot(null);
+    if (!enabled || !seasonId) return;
+    return onValue(ref(rtdb, `seasons/${seasonId}`), (snap) => {
       setRoot(snap.exists() ? (snap.val() as LeagueRoot) : null);
     });
-  }, [enabled]);
+  }, [enabled, seasonId]);
   return { root, loading: enabled && root === null };
 }
 
@@ -193,7 +211,7 @@ export function predsFor(root: LeagueRoot, lgKey: string, ep: number): Record<st
   return root.predictions?.[lgKey]?.[String(ep)] || {};
 }
 export function setPrediction(lgKey: string, ep: number, playerId: string, contestantId: string | null) {
-  return update(ref(rtdb, ROOT), { [`predictions/${lgKey}/${ep}/${playerId}`]: contestantId });
+  return update(ref(rtdb, root_()), { [`predictions/${lgKey}/${ep}/${playerId}`]: contestantId });
 }
 
 // ---- Weekly money pool (Porterville only) ----
@@ -302,7 +320,7 @@ export function messagesFor(root: LeagueRoot, lgKey: string): ChatMessage[] {
 // one doesn't just fail its own write — it sits in the record and fails every
 // draft transaction afterwards. Author name is capped for the same reason.
 export function sendMessage(lgKey: string, authorId: string, authorName: string, text: string) {
-  return push(ref(rtdb, `${ROOT}/messages/${lgKey}`), {
+  return push(ref(rtdb, `${root_()}/messages/${lgKey}`), {
     authorId,
     authorName: clamp(authorName, LIMITS.personName),
     text: clamp(text, LIMITS.messageText),
@@ -321,7 +339,7 @@ export function sendGif(lgKey: string, authorId: string, authorName: string, gif
   if (typeof gif.width === 'number') payload.width = gif.width;
   if (typeof gif.height === 'number') payload.height = gif.height;
   if (gif.title) payload.title = clamp(gif.title, 100);
-  return push(ref(rtdb, `${ROOT}/messages/${lgKey}`), {
+  return push(ref(rtdb, `${root_()}/messages/${lgKey}`), {
     authorId,
     authorName: clamp(authorName, LIMITS.personName),
     text: '',
@@ -333,7 +351,7 @@ export function sendGif(lgKey: string, authorId: string, authorName: string, gif
 // Commissioner-only, and only offered behind a confirmation — this wipes the
 // league's whole chat for everyone, not just the person who tapped it.
 export function clearMessages(lgKey: string) {
-  return update(ref(rtdb, ROOT), { [`messages/${lgKey}`]: null });
+  return update(ref(rtdb, root_()), { [`messages/${lgKey}`]: null });
 }
 
 // ---- Draft (commissioner setup + atomic picks) ----
@@ -343,7 +361,7 @@ export function clearMessages(lgKey: string) {
 // copy, so the whole group can rehearse together without touching the real
 // draft. Everything else (chat, standings, predictions) stays real.
 const PRACTICE_ROOT = 'rehearsal';
-const draftPath = (practice: boolean) => (practice ? PRACTICE_ROOT : ROOT);
+const draftPath = (practice: boolean) => (practice ? PRACTICE_ROOT : root_());
 
 /** The record the draft should read from: the live one, or the practice copy (null while it loads). */
 export function useDraftRoot(liveRoot: LeagueRoot): { practice: boolean; root: LeagueRoot | null } {
@@ -381,7 +399,7 @@ export function resetPracticeDraft(live: LeagueRoot) {
 // last rehearsal never show up.
 export async function setPracticeForEveryone(on: boolean, live: LeagueRoot) {
   if (on) await resetPracticeDraft(live);
-  await update(ref(rtdb, ROOT), { draftPractice: on ? true : null });
+  await update(ref(rtdb, root_()), { draftPractice: on ? true : null });
 }
 
 export function draftSequence(order: string[], picksPerPlayer: number): string[] {
@@ -539,7 +557,7 @@ export async function makeDraftPick(lgKey: string, contestantId: string, playerI
 
       lg.picks = lg.picks || {};
       const owners = ownersOf(lg, contestantId);
-      if (owners.length >= 2) { outcome = { ok: false, reason: 'taken' }; return; }
+      if (owners.length >= (lg.maxOwners ?? 2)) { outcome = { ok: false, reason: 'taken' }; return; }
       if (owners.includes(playerId)) { outcome = { ok: false, reason: 'already-yours' }; return; }
       if (owners.length > 0 && slackFor(cast, lg) <= 0) { outcome = { ok: false, reason: 'locked' }; return; }
 
@@ -656,7 +674,7 @@ export function toggleReaction(
   playerId: string,
   on: boolean,
 ) {
-  return update(ref(rtdb, `${ROOT}/messages/${lgKey}/${messageId}/reactions/${emoji}`), {
+  return update(ref(rtdb, `${root_()}/messages/${lgKey}/${messageId}/reactions/${emoji}`), {
     [playerId]: on ? true : null,
   });
 }
@@ -692,5 +710,5 @@ export function winnerPicksFor(root: LeagueRoot, lgKey: string): Record<string, 
 }
 
 export function setWinnerPick(lgKey: string, playerId: string, contestantId: string) {
-  return update(ref(rtdb, `${ROOT}/winnerPicks/${lgKey}`), { [playerId]: contestantId });
+  return update(ref(rtdb, `${root_()}/winnerPicks/${lgKey}`), { [playerId]: contestantId });
 }

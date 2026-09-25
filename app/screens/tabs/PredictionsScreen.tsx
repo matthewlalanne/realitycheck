@@ -35,7 +35,7 @@ export default function PredictionsScreen() {
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
   // League choice lives in LeagueContext — the header switcher drives it.
-  const { root, leagueKey: predKey, league: lg, playerId } = useLeague();
+  const { root, leagueKey: predKey, league: lg, playerId, terms } = useLeague();
   const week = predictionEpisodeNumber(predKey);
   const closed = predictionsClosed(week, predKey);
   const preds = predsFor(root, predKey, week);
@@ -146,7 +146,7 @@ export default function PredictionsScreen() {
           <Text style={styles.statusLock}>{lockLabel(week, predKey)}</Text>
           {scored ? (
             <Text style={styles.statusResult}>
-              Voted out: {outThisEp.map((c) => c.name).join(', ')}
+              {terms.out === 'voted out' ? 'Voted out' : 'Eliminated'}: {outThisEp.map((c) => c.name).join(', ')}
               {savedPick ? (outThisEp.some((c) => c.id === savedPick) ? ' — you called it!' : ' — not your pick this time.') : ''}
             </Text>
           ) : (
@@ -307,7 +307,7 @@ export default function PredictionsScreen() {
         {tab === 'season' && (<>
 
         <Panel style={[styles.seasonCard, winnerLocked && styles.statusCardLocked]}>
-          <Text style={styles.statusLock}>Sole Survivor · season pick</Text>
+          <Text style={styles.statusLock}>{terms.winner.charAt(0).toUpperCase() + terms.winner.slice(1)} · season pick</Text>
           {myWinner ? (
             <View style={styles.seasonRow}>
               {<CastAvatar id={myWinner} style={styles.seasonPhoto} />}
@@ -407,7 +407,7 @@ export default function PredictionsScreen() {
                 {saving
                   ? 'Saving…'
                   : !selected
-                    ? 'Pick a castaway'
+                    ? `Pick a ${terms.unit}`
                     : dirty
                       ? `Lock in ${pickedName(selected)}`
                       : 'Locked in'}

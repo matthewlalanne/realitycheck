@@ -8,6 +8,8 @@ export type Contestant = {
   name: string;
   age: number;
   from: string;
+  /** e.g. an Amazing Race team's relationship ("Married", "Siblings"). */
+  detail?: string;
   eliminatedWeek: number | null;
   exitReason?: 'voted' | 'quit';
 };

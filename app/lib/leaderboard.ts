@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { onValue, ref, runTransaction } from 'firebase/database';
 import { rtdb } from './firebase';
+import { seasonPath } from './season';
 
 // Game leaderboards live in the same shared league record the website uses
 // (league/puzzleScores/{size} and league/memoryScores/{pairs}), so a score set
@@ -8,12 +9,11 @@ import { rtdb } from './firebase';
 // AsyncStorage, which is why app players never saw anyone else's times.
 export type ScoreEntry = { name: string; ms: number; moves: number; at: number };
 
-const ROOT = 'league';
 const TOP_N = 10;
 
 function pathFor(game: string, variant: string) {
   const branch = game === 'memory' ? 'memoryScores' : 'puzzleScores';
-  return `${ROOT}/${branch}/${variant}`;
+  return `${seasonPath()}/${branch}/${variant}`;
 }
 
 // The website writes these as JSON arrays. Firebase returns an array when the

@@ -151,6 +151,130 @@ exports.googleSignIn = onCall(
 );
 
 // ---------------------------------------------------------------------------
+// Leagues: create and join
+//
+// Leagues live inside their season record (seasons/<seasonId>/leagues/<key>).
+// Clients can't add themselves to a league — the rules only let existing
+// members write — so both of these run here with admin rights:
+//   inviteCodes/<CODE>        -> { seasonId, leagueKey }
+//   userLeagues/<uid>/<key>   -> { seasonId, name, personId, joinedAt }
+//   ...leagues/<key>/memberIds/<uid> -> the roster id that person plays as
+
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"; // no 0/O/1/I/L
+
+function randomCode() {
+  let c = "";
+  for (let i = 0; i < 6; i++) c += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  return c;
+}
+
+function cleanName(raw, max = 40) {
+  const s = String(raw || "").trim().replace(/\s+/g, " ").slice(0, max);
+  if (!s) throw new HttpsError("invalid-argument", "Add your name first.");
+  return s;
+}
+
+exports.createLeague = onCall({ region: REGION }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+  const d = request.data || {};
+  const db = getDatabase();
+
+  const seasonId = String(d.seasonId || "");
+  const catalog = (await db.ref(`seasonCatalog/${seasonId}`).get()).val();
+  if (!catalog || !catalog.open) throw new HttpsError("failed-precondition", "That season isn't open for new leagues.");
+
+  const name = cleanName(d.name, 60);
+  const playerName = cleanName(d.playerName);
+  const picksPerPlayer = Math.max(1, Math.min(10, Number(d.picksPerPlayer) || 2));
+  const style = d.style === "points" ? "points" : "last-standing";
+  const draftMode = ["live", "auto", "offline"].includes(d.draftMode) ? d.draftMode : "live";
+  const draftAt = typeof d.draftAt === "string" && !Number.isNaN(Date.parse(d.draftAt)) ? d.draftAt : null;
+
+  let code = randomCode();
+  for (let i = 0; i < 8 && (await db.ref(`inviteCodes/${code}`).get()).exists(); i++) code = randomCode();
+  const leagueKey = "lg" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  const league = {
+    name,
+    picksPerPlayer,
+    maxOwners: d.sharedPicks === false ? 1 : 2,
+    style,
+    draftMode,
+    draftAt,
+    players: [{ id: uid, name: playerName }],
+    memberIds: { [uid]: uid },
+    commissionerIds: [uid],
+    inviteCode: code,
+    draftState: { started: false, currentPickIndex: 0, complete: false },
+    createdAt: Date.now(),
+  };
+  await db.ref().update({
+    [`seasons/${seasonId}/leagues/${leagueKey}`]: league,
+    [`inviteCodes/${code}`]: { seasonId, leagueKey },
+    [`userLeagues/${uid}/${leagueKey}`]: { seasonId, name, personId: uid, joinedAt: Date.now() },
+  });
+  return { seasonId, leagueKey, code, personId: uid };
+});
+
+exports.joinLeague = onCall({ region: REGION }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+  const d = request.data || {};
+  const code = String(d.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const db = getDatabase();
+  const idx = (await db.ref(`inviteCodes/${code}`).get()).val();
+  if (!idx) throw new HttpsError("not-found", "No league with that code.");
+  const { seasonId, leagueKey } = idx;
+  const lgRef = db.ref(`seasons/${seasonId}/leagues/${leagueKey}`);
+  const lg = (await lgRef.get()).val();
+  if (!lg) throw new HttpsError("not-found", "No league with that code.");
+
+  const finish = async (personId) => {
+    await db.ref(`userLeagues/${uid}/${leagueKey}`).set({ seasonId, name: lg.name, personId, joinedAt: Date.now() });
+    return { status: "joined", seasonId, leagueKey, personId, name: lg.name };
+  };
+
+  const memberIds = lg.memberIds || {};
+  if (memberIds[uid]) return finish(memberIds[uid]);
+
+  // A league copied in with its roster already filled (claimable) lets people
+  // take over an existing player — their picks and history come with them.
+  const claimed = new Set(Object.values(memberIds));
+  const people = (lg.players || []).flatMap((p) => (p.members && p.members.length ? p.members : [{ id: p.id, name: p.name }]));
+  const open = lg.claimable ? people.filter((p) => !claimed.has(p.id)) : [];
+
+  if (open.length && !d.claimId) return { status: "choose", seasonId, leagueKey, name: lg.name, open };
+
+  if (d.claimId && d.claimId !== "new") {
+    if (!open.some((p) => p.id === d.claimId)) throw new HttpsError("already-exists", "Someone already claimed that player.");
+    const res = await lgRef.child("memberIds").transaction((m) => {
+      m = m || {};
+      if (Object.values(m).includes(d.claimId)) return; // abort: taken meanwhile
+      m[uid] = d.claimId;
+      return m;
+    });
+    if (!res.committed) throw new HttpsError("already-exists", "Someone already claimed that player.");
+    return finish(d.claimId);
+  }
+
+  if (lg.draftState && lg.draftState.started) {
+    throw new HttpsError("failed-precondition", "This league has already drafted. Ask the commissioner to add you.");
+  }
+  const playerName = cleanName(d.playerName);
+  const res = await lgRef.transaction((cur) => {
+    if (!cur) return; // abort
+    cur.players = cur.players || [];
+    if (!cur.players.some((p) => p.id === uid)) cur.players.push({ id: uid, name: playerName });
+    cur.memberIds = cur.memberIds || {};
+    cur.memberIds[uid] = uid;
+    return cur;
+  });
+  if (!res.committed) throw new HttpsError("aborted", "Couldn't join right now. Try again.");
+  return finish(uid);
+});
+
+// ---------------------------------------------------------------------------
 // Clears expired sign-in codes so authCodes doesn't grow forever.
 exports.pruneExpiredCodes = onSchedule(
   { schedule: "every 24 hours", region: REGION },
