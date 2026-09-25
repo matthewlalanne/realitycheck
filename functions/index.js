@@ -58,7 +58,14 @@ exports.requestEmailCode = onCall(
 
     const resend = new Resend(RESEND_API_KEY.value());
     try {
-      await resend.emails.send({
+      // The v4 SDK does NOT throw for a rejected send — it resolves with
+      // { data, error }. A prior version of this function only had the
+      // try/catch below, which only ever fires for a network-level failure,
+      // so a Resend-side rejection (e.g. their shared test sender
+      // onboarding@resend.dev only delivering to the account's own address
+      // until a domain is verified) silently returned {ok:true} with no
+      // email ever sent.
+      const { error } = await resend.emails.send({
         // Resend's shared test sender — works with zero DNS setup. Swap for a
         // verified domain (see README "Auth setup") once one's set up; the old
         // sign-in@playrealitycheck.app was never a real, verified domain (this
@@ -70,7 +77,12 @@ exports.requestEmailCode = onCall(
         subject: `${code} is your Reality Check code`,
         text: `Your sign-in code is ${code}. It expires in 10 minutes.\n\nDidn't request this? You can ignore it.`,
       });
+      if (error) {
+        logger.error("email send rejected", error);
+        throw new HttpsError("internal", "Couldn't send the code. Try again in a moment.");
+      }
     } catch (err) {
+      if (err instanceof HttpsError) throw err;
       logger.error("email send failed", err);
       throw new HttpsError("internal", "Couldn't send the code. Try again in a moment.");
     }
