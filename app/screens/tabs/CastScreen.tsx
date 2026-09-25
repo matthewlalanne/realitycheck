@@ -39,7 +39,7 @@ export default function CastScreen({ navigation }: Props) {
   const board = useBoard(leagueKey, playerId);
   return (
     <View style={styles.container}>
-      <PinnedHeader title="Cast" subtitle="Tap anyone for their details and history." />
+      <PinnedHeader title="Cast" />
       <FlatList
         ref={scrollRef}
         contentContainerStyle={styles.content}
@@ -84,15 +84,13 @@ export default function CastScreen({ navigation }: Props) {
                   <Ionicons name="document-text-outline" size={13} color={colors.accent2} />
                 ) : null}
               </View>
-              <Text style={styles.meta}>
-                {terms.unit === 'team'
-                  ? [c.detail, c.from].filter(Boolean).join('  ·  ')
-                  : [`Age ${c.age}`, c.from].join('  ·  ')}
-              </Text>
-              {/* Occupation as its own line, same as the website's cast cards. */}
-              {bios[c.id]?.occupation ? (
-                <Text style={styles.occupation} numberOfLines={1}>{bios[c.id].occupation}</Text>
-              ) : null}
+              {/* Name, then what they do (a team's relationship), then where
+                  they're from — each on its own line. Age lives on the bio. */}
+              {(() => {
+                const role = terms.unit === 'team' ? c.detail : bios[c.id]?.occupation;
+                return role ? <Text style={styles.occupation} numberOfLines={1}>{role}</Text> : null;
+              })()}
+              {!!c.from && <Text style={styles.meta} numberOfLines={1}>{c.from}</Text>}
               {!out && (idols > 0 || votes > 0) && (
                 <View style={styles.chips}>
                   {idols > 0 && <IdolChip count={idols} />}

@@ -706,7 +706,6 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   stepBtn: { width: 30, height: 30, borderRadius: 15, borderWidth: 1, borderColor: colors.line, alignItems: 'center', justifyContent: 'center' },
   stepValue: { color: colors.text, fontSize: 15, fontWeight: '800', minWidth: 20, textAlign: 'center' },
   checkboxAccent: { backgroundColor: colors.accent, borderColor: colors.accent },
-  holdRow: { paddingVertical: 6, gap: 6, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
   holdTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   holdChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   holdChip: {

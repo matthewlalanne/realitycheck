@@ -56,18 +56,15 @@ export default function ScreenHeader({
             accessibilityRole="button"
             accessibilityLabel={`League: ${currentName}. Tap to switch.`}
           >
-            <Text style={styles.triggerText}>Switch</Text>
+            <Text style={styles.triggerText}>Switch league</Text>
             <Ionicons name="chevron-down" size={14} color={colors.accent} />
           </Pressable>
         )}
       </View>
-      {/* The league name gets its own line at full width instead of being
-          squeezed into the pill above, which cut off anything longer than a
-          couple words. */}
-      {(canSwitchLeagues || !!onExitLeague) && (
-        <Text style={styles.leagueName} numberOfLines={1}>{currentName}</Text>
-      )}
-      {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+      {/* Which league you're in, on every page — no descriptive body copy. A
+          screen that names its own content (a recap's title) passes it as
+          `subtitle` instead. */}
+      <Text style={styles.leagueName} numberOfLines={1}>{subtitle ?? currentName}</Text>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         {/* Backdrop doubles as the dismiss target, the way a menu should behave. */}
@@ -207,5 +204,4 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   itemOn: { backgroundColor: colors.bg2 },
   itemText: { color: colors.textDim, fontSize: 15, fontWeight: '600' },
   itemTextOn: { color: colors.text, fontWeight: '800' },
-  subtitle: { color: colors.textDim, fontSize: 14, marginTop: 4 },
 });

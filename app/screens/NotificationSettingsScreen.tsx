@@ -24,8 +24,8 @@ export default function NotificationSettingsScreen({ navigation }: Props) {
       <View style={styles.content}>
         <Text style={styles.title}>Notifications</Text>
         <Panel style={styles.panel}>
-          {NOTIF_OPTIONS.map((o) => (
-            <View key={o.key} style={styles.row}>
+          {NOTIF_OPTIONS.map((o, i) => (
+            <View key={o.key} style={[styles.row, i === 0 && styles.rowFirst]}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.label}>{o.label}</Text>
                 <Text style={styles.hint}>{o.hint}</Text>
@@ -46,6 +46,7 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   title: { color: colors.text, fontSize: 24, fontWeight: '800' },
   panel: { gap: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },
+  rowFirst: { borderTopWidth: 0, paddingTop: 0 },
   label: { color: colors.text, fontSize: 15, fontWeight: '700' },
   hint: { color: colors.textDim, fontSize: 12, marginTop: 2 },
 });

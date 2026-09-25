@@ -37,7 +37,7 @@ export default function TribesScreen({ navigation }: Props) {
       <View style={styles.backBar}>
         <BackButton onPress={() => navigation.goBack()} />
       </View>
-      <PinnedHeader title="Tribes" subtitle="Names, buff colors, and who's on each." topInset={false} />
+      <PinnedHeader title="Tribes" topInset={false} />
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {tribes.map((t) => (
           <TribeEditor key={t.id} tribe={t} styles={styles} onRemove={() => confirmRemove(t)} />
@@ -50,8 +50,8 @@ export default function TribesScreen({ navigation }: Props) {
           <>
             <Text style={styles.sectionTitle}>Castaways</Text>
             <Panel style={styles.castPanel}>
-              {cast.map((c) => (
-                <View key={c.id} style={styles.castRow}>
+              {cast.map((c, i) => (
+                <View key={c.id} style={[styles.castRow, i === 0 && styles.castRowFirst]}>
                   <CastAvatar id={c.id} style={styles.photo} />
                   <Text style={[styles.castName, !!c.eliminatedWeek && styles.castOut]} numberOfLines={1}>
                     {c.name}
@@ -152,6 +152,7 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line,
   },
+  castRowFirst: { borderTopWidth: 0 },
   photo: { width: 32, height: 32, borderRadius: 16 },
   castName: { flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' },
   castOut: { textDecorationLine: 'line-through', color: colors.textDim },

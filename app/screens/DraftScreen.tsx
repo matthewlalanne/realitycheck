@@ -264,7 +264,7 @@ export default function DraftScreen({ navigation }: Props) {
         <View style={styles.backBar}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
-        <PinnedHeader title="Draft" subtitle={league.name} topInset={false} />
+        <PinnedHeader title="Draft" topInset={false} />
         <ScrollView contentContainerStyle={styles.setupContent}>
           {practiceBar}
           <Panel style={styles.completeCard}>
@@ -290,7 +290,7 @@ export default function DraftScreen({ navigation }: Props) {
         <View style={styles.backBar}>
           <BackButton onPress={() => navigation.goBack()} />
         </View>
-        <PinnedHeader title="Draft" subtitle={league.name} topInset={false} />
+        <PinnedHeader title="Draft" topInset={false} />
         <ScrollView contentContainerStyle={styles.setupContent}>
           {practiceBar}
           {canRun && (
@@ -476,7 +476,7 @@ export default function DraftScreen({ navigation }: Props) {
       <View style={styles.backBar}>
         <BackButton onPress={() => navigation.goBack()} />
       </View>
-      <PinnedHeader title="Draft" subtitle={league.name} topInset={false} />
+      <PinnedHeader title="Draft" topInset={false} />
       <FlatList
         contentContainerStyle={{ padding: 20, paddingTop: CONTENT_TOP_GAP, paddingBottom: 40, gap: 10 }}
         data={byRank ? boardOrder(board, contestants) : [...contestants].sort((a, b) => a.name.localeCompare(b.name))}

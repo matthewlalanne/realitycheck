@@ -221,7 +221,7 @@ export default function MessagesScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <Animated.View style={styles.listWrap} {...pan.panHandlers}>
-      <PinnedHeader title="Chat" subtitle="Talk strategy and trash-talk with the league." />
+      <PinnedHeader title="Chat" />
       <FlatList
         onScrollBeginDrag={() => { if (picker) setPicker(null); }}
         ref={listRef}

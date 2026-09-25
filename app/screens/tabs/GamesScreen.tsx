@@ -26,7 +26,7 @@ export default function GamesScreen() {
 
   return (
     <View style={styles.container}>
-      <PinnedHeader title="Games" subtitle="Mini-games while you wait for the episode." />
+      <PinnedHeader title="Games" />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content} onLayout={onLayout}>
 
       <View style={styles.tabsWrap}>

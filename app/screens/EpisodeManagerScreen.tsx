@@ -40,7 +40,7 @@ export default function EpisodeManagerScreen({ navigation }: Props) {
       <View style={styles.backBar}>
         <BackButton onPress={() => navigation.goBack()} />
       </View>
-      <PinnedHeader title="Episodes" subtitle="Publish who went home and the recap." topInset={false} />
+      <PinnedHeader title="Episodes" topInset={false} />
       <ScrollView contentContainerStyle={styles.content}>
 
         <Panel style={styles.testCard}>

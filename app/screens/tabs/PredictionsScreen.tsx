@@ -119,7 +119,7 @@ export default function PredictionsScreen() {
 
   return (
     <View style={styles.container}>
-      <PinnedHeader title="Predictions" subtitle="Make your weekly pick and season-long call." />
+      <PinnedHeader title="Predictions" />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
         {/* Two tabs so the season pick isn't buried at the bottom of a long page. */}
@@ -188,14 +188,14 @@ export default function PredictionsScreen() {
         </Pressable>
         {showEveryone && (
           <Panel style={styles.listPanel}>
-            {peopleOf(lg).map((p) => {
+            {peopleOf(lg).map((p, i) => {
               const cid = preds[p.id];
               const me = p.id === playerId;
               const shown = closed || me;
               const label = !cid ? 'No pick' : shown ? pickedName(cid) : 'Locked in';
               const hit = scored && cid && outThisEp.some((c) => c.id === cid);
               return (
-                <View key={p.id} style={styles.listRow}>
+                <View key={p.id} style={[styles.listRow, i === 0 && styles.listRowFirst]}>
                   <Text style={[styles.listName, me && styles.listNameMe]}>{p.name}{me ? ' (you)' : ''}</Text>
                   <Text style={[styles.listValue, !cid && styles.listValueMuted, hit && styles.listValueHit]}>{label}{hit ? ' ✓' : ''}</Text>
                 </View>
@@ -296,7 +296,7 @@ export default function PredictionsScreen() {
         <Panel style={styles.listPanel}>
           {!anyWins && <Text style={styles.hint}>No episodes scored yet — the first one counts after the premiere.</Text>}
           {board.map((b, i) => (
-            <Pressable key={b.id} style={styles.listRow} onPress={() => navigation.navigate('TeamProfile', { playerId: b.id })}>
+            <Pressable key={b.id} style={[styles.listRow, i === 0 && anyWins && styles.listRowFirst]} onPress={() => navigation.navigate('TeamProfile', { playerId: b.id })}>
               <Text style={[styles.listName, b.id === playerId && styles.listNameMe]}>{i + 1}. {b.name}</Text>
               <Text style={styles.listValue}>
                 {b.wins} correct{betting && b.wins > 0 ? ` · ${fmtMoney(b.wins * WEEKLY_BET * 100)}+` : ''}
@@ -504,6 +504,8 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   listPanel: { gap: 10 },
   // paddingTop matches listPanel's gap, so each divider sits centred between rows.
   listRow: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },
+  // A divider only separates a row from something above it — never the first thing in a panel.
+  listRowFirst: { borderTopWidth: 0, paddingTop: 0 },
   listName: { color: colors.text, fontSize: 13, fontWeight: '600' },
   listNameMe: { color: colors.accent },
   listValue: { color: colors.textDim, fontSize: 13 },

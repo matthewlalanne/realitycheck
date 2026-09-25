@@ -95,7 +95,7 @@ export function predictionsClosed(episode: number, leagueKey?: string): boolean 
   return clock() >= pickDeadline(episode, leagueKey);
 }
 
-function fmtCountdown(leagueKey?: string): { label: string; clock: string } {
+function fmtCountdown(leagueKey?: string): { label: string; clock: string; parts: { d: number; h: number; m: number; s: number } } {
   const ep = upcomingEpisodeNumber(leagueKey);
   const diff = Math.max(0, episodeAirTime(ep, leagueKey) - clock());
   const d = Math.floor(diff / 86400000);
@@ -103,7 +103,7 @@ function fmtCountdown(leagueKey?: string): { label: string; clock: string } {
   const m = Math.floor((diff % 3600000) / 60000);
   const s = Math.floor((diff % 60000) / 1000);
   const label = ep === 1 ? 'Season premiere in' : `Episode ${ep} in`;
-  return { label, clock: `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s` };
+  return { label, clock: `${d}d ${String(h).padStart(2, '0')}h ${String(m).padStart(2, '0')}m ${String(s).padStart(2, '0')}s`, parts: { d, h, m, s } };
 }
 
 export function useEpisodeCountdown(leagueKey?: string) {

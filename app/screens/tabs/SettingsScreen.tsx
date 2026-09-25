@@ -65,7 +65,7 @@ export default function SettingsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <PinnedHeader title="Settings" subtitle="Your profile, alerts, and league tools." />
+      <PinnedHeader title="Settings" />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
       <Panel style={styles.section}>
@@ -104,7 +104,7 @@ export default function SettingsScreen({ navigation }: Props) {
       </Panel>
 
       <Panel style={styles.section}>
-        <SettingsAction label="Notifications" onPress={() => navigation.navigate('NotificationSettings')} />
+        <SettingsAction first label="Notifications" onPress={() => navigation.navigate('NotificationSettings')} />
       </Panel>
 
       <Panel style={styles.section}>
@@ -274,11 +274,12 @@ function SettingsAction({
   label,
   onPress,
   destructive,
-}: { label: string; onPress: () => void; destructive?: boolean }) {
+  first,
+}: { label: string; onPress: () => void; destructive?: boolean; first?: boolean }) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
   return (
-    <Pressable style={styles.actionRow} onPress={onPress}>
+    <Pressable style={[styles.actionRow, first && styles.actionRowFirst]} onPress={onPress}>
       <Text style={[styles.actionLabel, destructive && styles.actionLabelDestructive]}>{label}</Text>
       <Ionicons name="chevron-forward" size={18} color={destructive ? colors.red : colors.textDim} />
     </Pressable>
@@ -317,8 +318,8 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   actionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },
   actionLabel: { color: colors.text, fontSize: 14 },
   actionLabelDestructive: { color: colors.red, fontWeight: '600' },
-  notifRow: { flexDirection: 'row', alignItems: 'center', gap: 12, borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },
-  notifLabel: { color: colors.text, fontSize: 15, fontWeight: '700' },
+  // Only divides a row from something above it — not when it's first in its panel.
+  actionRowFirst: { borderTopWidth: 0, paddingTop: 0 },
   signOutButton: { borderWidth: 1, borderColor: colors.line, borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 8 },
   signOutButtonText: { color: colors.textDim, fontSize: 14, fontWeight: '700' },
   backdrop: { flex: 1, backgroundColor: colors.scrim, alignItems: 'center', justifyContent: 'center', padding: 24 },

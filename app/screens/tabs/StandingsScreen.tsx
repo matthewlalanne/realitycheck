@@ -81,18 +81,27 @@ export default function StandingsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <PinnedHeader title={`Hi, ${playerName}`} subtitle="Your standings and what's next, at a glance." />
+      <PinnedHeader title={`Hi, ${playerName}`} />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
       <View style={styles.countdownCard}>
         <ImageBackground source={COUNTDOWN_BG[theme]} style={styles.countdownBg} resizeMode="cover">
           {/* Fixed dark scrim + light type: the photo is the same in every
               theme, so the text can't follow the palette and stay readable. */}
-          <View style={styles.countdownRow}>
+          <View style={styles.countdownHead}>
             <Text style={styles.countdownLabel}>{countdown.label.toUpperCase()}</Text>
-            <Text style={styles.countdownClock}>{countdown.clock}</Text>
+            <Text style={styles.countdownMeta}>{remaining}/{contestants.length} {terms.units} in</Text>
           </View>
-          <Text style={styles.countdownMeta}>{remaining} of {contestants.length} {terms.units} still in</Text>
+          {/* Each unit its own block: a run-on "5d 06h 48m 06s" string was
+              hard to read at a glance. */}
+          <View style={styles.countdownUnits}>
+            {([['d', 'Days'], ['h', 'Hrs'], ['m', 'Min'], ['s', 'Sec']] as const).map(([k, unit]) => (
+              <View key={k} style={styles.countdownUnit}>
+                <Text style={styles.countdownNum}>{String(countdown.parts[k]).padStart(k === 'd' ? 1 : 2, '0')}</Text>
+                <Text style={styles.countdownUnitLabel}>{unit.toUpperCase()}</Text>
+              </View>
+            ))}
+          </View>
         </ImageBackground>
       </View>
 
@@ -225,26 +234,25 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: colors.line,
   },
-  // Compact: label + clock share one row instead of stacking three lines —
-  // this card is "what's next", not the focal point of the screen.
-  countdownBg: { alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
-  countdownScrim: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: colors.photoScrim,
-  },
-  countdownRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  countdownBg: { paddingVertical: 14, paddingHorizontal: 18, gap: 10 },
+  countdownHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   countdownLabel: {
-    color: 'rgba(255,255,255,0.78)', fontSize: 10, letterSpacing: 1.5, fontWeight: '700',
+    color: 'rgba(255,255,255,0.85)', fontSize: 11, letterSpacing: 1.6, fontWeight: '800',
     textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4,
-  },
-  countdownClock: {
-    color: colors.accentOnDark, fontSize: 18, fontWeight: '800',
-    fontVariant: ['tabular-nums'], letterSpacing: 0.5,
-    textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 6,
   },
   countdownMeta: {
-    color: 'rgba(255,255,255,0.88)', fontSize: 11,
+    color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600',
     textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4,
+  },
+  countdownUnits: { flexDirection: 'row', justifyContent: 'space-between' },
+  countdownUnit: { alignItems: 'center', flex: 1 },
+  countdownNum: {
+    color: colors.accentOnDark, fontSize: 28, fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+    textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 6,
+  },
+  countdownUnitLabel: {
+    color: 'rgba(255,255,255,0.7)', fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2, marginTop: -2,
   },
   draftCard: { backgroundColor: colors.panel2, borderColor: colors.accent },
   draftTitle: { color: colors.accent, fontSize: 16, fontWeight: '800' },
