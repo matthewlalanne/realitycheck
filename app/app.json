@@ -65,7 +65,8 @@
       "expo-asset",
       "expo-image",
       "@react-native-community/datetimepicker",
-      "expo-web-browser"
+      "expo-web-browser",
+      "./plugins/withSceneLifecycle"
     ],
     "owner": "mattlalanne",
     "runtimeVersion": {
