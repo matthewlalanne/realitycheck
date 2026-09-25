@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import * as Updates from 'expo-updates';
 import Constants from 'expo-constants';
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,7 +19,6 @@ import { clearMessages, draftDone } from '../../lib/state';
 import { CopyableCode } from '../onboarding/LeagueScreens';
 import Avatar from '../../components/Avatar';
 import { avatarFor, pickAndStoreAvatar, setAvatar, useAvatars } from '../../lib/avatars';
-import { NOTIF_OPTIONS, useNotifPrefs } from '../../lib/notificationPrefs';
 
 const MODES: { key: ThemeMode; label: string }[] = [
   { key: 'auto', label: 'Auto' },
@@ -46,7 +45,6 @@ export default function SettingsScreen({ navigation }: Props) {
   // into every league you play in.
   const myAvatar = avatarFor(avatars, playerId, [], leagueKey) ?? null;
   const [photoBusy, setPhotoBusy] = useState(false);
-  const { prefs, toggle } = useNotifPrefs();
   const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'downloading' | 'current' | 'error'>('idle');
 
   async function checkForUpdate() {
@@ -106,16 +104,7 @@ export default function SettingsScreen({ navigation }: Props) {
       </Panel>
 
       <Panel style={styles.section}>
-        <Text style={styles.sectionTitle}>Notifications</Text>
-        {NOTIF_OPTIONS.map((o) => (
-          <View key={o.key} style={styles.notifRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.notifLabel}>{o.label}</Text>
-              <Text style={styles.fieldHint}>{o.hint}</Text>
-            </View>
-            <Switch value={prefs[o.key]} onValueChange={() => toggle(o.key)} trackColor={{ true: colors.accent, false: colors.line }} />
-          </View>
-        ))}
+        <SettingsAction label="Notifications" onPress={() => navigation.navigate('NotificationSettings')} />
       </Panel>
 
       <Panel style={styles.section}>

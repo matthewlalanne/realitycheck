@@ -18,6 +18,7 @@ import TribesScreen from './screens/TribesScreen';
 import EpisodeRecapScreen from './screens/EpisodeRecapScreen';
 import TeamProfileScreen from './screens/TeamProfileScreen';
 import CastPhotosScreen from './screens/CastPhotosScreen';
+import NotificationSettingsScreen from './screens/NotificationSettingsScreen';
 import OnboardingFlow from './screens/onboarding/OnboardingFlow';
 import { useLastLeague } from './lib/lastLeague';
 import { useLeagueRoot } from './lib/state';
@@ -128,6 +129,7 @@ function RootNavigator() {
       >
         <Stack.Screen name="MainTabs" component={MainTabs} />
         <Stack.Screen name="CastPhotos" component={CastPhotosScreen} initialParams={{ setup: true }} />
+        <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
         <Stack.Screen name="Draft" component={DraftScreen} />
         <Stack.Screen name="Bio" component={BioScreen} />
         <Stack.Screen name="MyBoard" component={MyBoardScreen} />

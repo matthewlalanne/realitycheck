@@ -27,6 +27,8 @@ export type RootStackParamList = {
   // Upload every cast photo in one pass. `setup` shows the skip/done setup
   // framing (App.tsx, right after creating a league) instead of a plain back.
   CastPhotos: { setup?: boolean } | undefined;
+  // Pushed from Settings — its own page so Settings isn't five switches deep.
+  NotificationSettings: undefined;
 };
 
 export type MainTabParamList = {
