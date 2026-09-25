@@ -1,18 +1,21 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import type { ColorScheme } from '../../theme';
 import Panel from '../../components/Panel';
 import ScoreModal from '../../components/ScoreModal';
 import LeaderboardPanel from '../../components/LeaderboardPanel';
 import { useLeaderboard } from '../../lib/leaderboard';
+import { useLeague } from '../../contexts/LeagueContext';
+import { pickAndStorePuzzleImage } from '../../lib/avatars';
 
 // Same three boards as the site (Survivor League/app.js PUZZLE_SIZE_OPTIONS) —
 // the leaderboard is shared and keyed by size, so the lists have to match.
 const SIZE_OPTIONS = [3, 4, 5] as const;
-// Our own art, not the season logo (that's CBS's). Confirm the image's licence before launch.
-const puzzleImage = require('../../assets/backgrounds/tropical-sunset.jpg');
+// Default art until a league picks its own photo — our own image, not the
+// season logo (that's CBS's).
+const DEFAULT_PUZZLE_IMAGE = require('../../assets/backgrounds/tropical-sunset.jpg');
 
 function fmtClock(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -47,6 +50,13 @@ function shufflePuzzle(n: number) {
 export default function PuzzleGame({ boardWidth }: { boardWidth: number }) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
+  const { league, leagueKey } = useLeague();
+  const puzzleImage = league.puzzleImage ? { uri: league.puzzleImage } : DEFAULT_PUZZLE_IMAGE;
+  const [changingPhoto, setChangingPhoto] = useState(false);
+  const changePhoto = async () => {
+    setChangingPhoto(true);
+    try { await pickAndStorePuzzleImage(leagueKey); } finally { setChangingPhoto(false); }
+  };
   const [n, setN] = useState<(typeof SIZE_OPTIONS)[number]>(3);
   const [tiles, setTiles] = useState<number[]>(solvedState(3));
   const [started, setStarted] = useState(false);
@@ -119,6 +129,17 @@ export default function PuzzleGame({ boardWidth }: { boardWidth: number }) {
         <Panel style={{ gap: 12 }}>
           <Text style={styles.introTitle}>🧩 Logo Puzzle</Text>
           <Text style={styles.introBody}>Rebuild the picture, one tile at a time.</Text>
+          <View style={styles.previewRow}>
+            <Image source={puzzleImage} style={styles.previewImage} />
+            <Pressable style={styles.changePhotoBtn} onPress={changePhoto} disabled={changingPhoto}>
+              {changingPhoto ? <ActivityIndicator color={colors.accent} size="small" /> : (
+                <>
+                  <Ionicons name="camera" size={14} color={colors.accent} />
+                  <Text style={styles.changePhotoText}>{league.puzzleImage ? 'Change photo' : 'Use your own photo'}</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
           <View style={styles.sizeRow}>
             {SIZE_OPTIONS.map((s) => (
               <Pressable key={s} style={[styles.sizeChip, n === s && styles.sizeChipActive]} onPress={() => setN(s)}>
@@ -189,6 +210,10 @@ export default function PuzzleGame({ boardWidth }: { boardWidth: number }) {
 const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   introTitle: { color: colors.text, fontSize: 17, fontWeight: '700' },
   introBody: { color: colors.textDim, fontSize: 13 },
+  previewRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  previewImage: { width: 56, height: 56, borderRadius: 10, backgroundColor: colors.bg2 },
+  changePhotoBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
+  changePhotoText: { color: colors.accent, fontSize: 13, fontWeight: '700' },
   sizeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   sizeChip: {
     paddingHorizontal: 14,

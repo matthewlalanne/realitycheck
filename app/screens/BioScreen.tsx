@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
@@ -11,6 +11,7 @@ import NoteEditor from '../components/NoteEditor';
 import { useLeague } from '../contexts/LeagueContext';
 import { useLiveContestants } from '../lib/episodes';
 import CastAvatar from '../components/CastAvatar';
+import { pickAndStoreCastPhoto } from '../lib/avatars';
 import { bios } from '../data/bios';
 import { noteOf, rankOf, useMyBoard } from '../lib/board';
 import { seasonStatsFor, statFor, statTiles } from '../lib/seasonStats';
@@ -44,7 +45,13 @@ export default function BioScreen({ route, navigation }: Props) {
       : `${ownerNames}'S PICK`;
   const { board, move, setNote } = useMyBoard(leagueKey, playerId);
   const [editing, setEditing] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   if (!contestant) return null;
+
+  const changePhoto = async () => {
+    setUploadingPhoto(true);
+    try { await pickAndStoreCastPhoto(leagueKey, contestant.id); } finally { setUploadingPhoto(false); }
+  };
 
   const rank = rankOf(board, contestant.id);
   // Season so far: totals, then episode by episode (newest first).
@@ -84,6 +91,17 @@ export default function BioScreen({ route, navigation }: Props) {
         <View style={[styles.heroFrame, !!outEp && styles.heroFrameOut]}>
           <CastAvatar id={contestant.id} style={styles.heroImage} />
           {!!outEp && <OutWash />}
+          {/* Every league uploads its own cast photos — there are no network
+              photos here (CBS's, not ours) — so this is the only way a photo
+              ever shows up instead of initials. */}
+          <Pressable style={styles.photoEditBtn} onPress={changePhoto} disabled={uploadingPhoto} hitSlop={6}>
+            {uploadingPhoto ? <ActivityIndicator color="#fff" size="small" /> : (
+              <>
+                <Ionicons name="camera" size={14} color="#fff" />
+                <Text style={styles.photoEditText}>{league.castPhotos?.[contestant.id] ? 'Change photo' : 'Add photo'}</Text>
+              </>
+            )}
+          </Pressable>
         </View>
         {/* Eyebrow: whose castaway this is. Voted-out bios say it in the banner instead. */}
         <View style={styles.nameBlock}>
@@ -227,6 +245,13 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     overflow: 'hidden',
   },
   heroImage: { width: '100%', height: '100%' },
+  photoEditBtn: {
+    position: 'absolute', bottom: 10, right: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 20, paddingVertical: 7, paddingHorizontal: 12,
+    minWidth: 32, minHeight: 28, justifyContent: 'center',
+  },
+  photoEditText: { color: '#fff', fontSize: 12.5, fontWeight: '700' },
   nameBlock: { gap: 3, marginTop: 4 },
   eyebrow: { color: colors.textDim, fontSize: 12, fontWeight: '800', letterSpacing: 1.4 },
   eyebrowMine: { color: colors.accent },

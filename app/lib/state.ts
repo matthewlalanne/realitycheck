@@ -65,6 +65,8 @@ export type LeagueRecord = {
   draftMode?: 'live' | 'auto' | 'offline';
   /** Castaway photos this league uploaded (castaway id -> image URL). Only this league sees them. */
   castPhotos?: Record<string, string>;
+  /** This league's own picture for the puzzle game. Falls back to the default art when unset. */
+  puzzleImage?: string;
   picks?: Record<string, string[] | string>;
 };
 export type RemoteContestant = {

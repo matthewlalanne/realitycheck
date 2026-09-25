@@ -3,6 +3,7 @@ import { onValue, ref, update } from 'firebase/database';
 import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 import { rtdb } from './firebase';
+import { seasonPath } from './season';
 
 // Avatars live in their own top-level node rather than inside `league`.
 // Every client subscribes to the whole league record, so putting image data
@@ -54,6 +55,49 @@ export function useAvatars(): AvatarMap {
   const [map, setMap] = useState<AvatarMap>({});
   useEffect(() => onValue(ref(rtdb, AVATARS), (snap) => setMap(snap.val() || {})), []);
   return map;
+}
+
+// Cast photos and the puzzle game's picture live per-league (not per-person
+// like avatars) — a league's own upload, only visible in that league. Wider
+// than the 160px avatar square since a cast photo shows full-frame on a
+// bio's hero image, and the puzzle needs enough detail to survive being cut
+// into tiles.
+const PHOTO_WIDTH = 400;
+const PHOTO_QUALITY = 0.6;
+const PUZZLE_WIDTH = 640;
+const PUZZLE_QUALITY = 0.65;
+
+async function pickPhoto(width: number, quality: number): Promise<string | null> {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) return null;
+  const picked = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, quality: 1 });
+  if (picked.canceled || !picked.assets?.length) return null;
+  // Resize before encoding: the picker only compresses, so a phone photo
+  // would otherwise arrive as a multi-megabyte string. Width only (no
+  // height) keeps whatever crop the person picked, since this photo shows
+  // up in both circular and rectangular spots around the app.
+  const shrunk = await manipulateAsync(
+    picked.assets[0].uri,
+    [{ resize: { width } }],
+    { compress: quality, format: SaveFormat.JPEG, base64: true },
+  );
+  return shrunk.base64 ? `data:image/jpeg;base64,${shrunk.base64}` : null;
+}
+
+/** Opens the photo library and stores a castaway's photo for this league only. */
+export async function pickAndStoreCastPhoto(leagueKey: string, contestantId: string): Promise<boolean> {
+  const uri = await pickPhoto(PHOTO_WIDTH, PHOTO_QUALITY);
+  if (!uri) return false;
+  await update(ref(rtdb, `${seasonPath()}/leagues/${leagueKey}/castPhotos`), { [contestantId]: uri });
+  return true;
+}
+
+/** Opens the photo library and stores this league's puzzle-game picture. */
+export async function pickAndStorePuzzleImage(leagueKey: string): Promise<boolean> {
+  const uri = await pickPhoto(PUZZLE_WIDTH, PUZZLE_QUALITY);
+  if (!uri) return false;
+  await update(ref(rtdb, `${seasonPath()}/leagues/${leagueKey}`), { puzzleImage: uri });
+  return true;
 }
 
 export async function setAvatar(playerId: string, dataUri: string | null) {
