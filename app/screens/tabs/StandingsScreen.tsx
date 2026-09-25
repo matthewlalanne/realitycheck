@@ -18,8 +18,10 @@ import { useEpisodeCountdown } from '../../lib/countdown';
 import { isEliminated, shortName, ownersOf, rosterIds, soleSurvivorId } from '../../lib/state';
 import { tribeOf } from '../../lib/tribes';
 import { idolCount, seasonStatsFor, stageOf } from '../../lib/seasonStats';
+import { pointsFor } from '../../lib/points';
 import { IdolChip, OutBadge, OutWash, VotesChip } from '../../components/CastawayStatus';
 import TribeLegend from '../../components/TribeLegend';
+import SegmentedTabs from '../../components/SegmentedTabs';
 import { Ionicons } from '@expo/vector-icons';
 
 // One gradient per theme, always dark-toned so the white countdown type
@@ -54,14 +56,20 @@ export default function StandingsScreen({ navigation }: Props) {
 
   const drafted = Object.keys(lg.picks || {}).length > 0;
   const winnerId = soleSurvivorId(root);
+  const isPointsLeague = lg.style === 'points';
   const ranked = [...lg.players]
     .map((p) => {
       const roster = rosterIds(lg, p.id).map((cid) => byId.get(cid)).filter(Boolean) as typeof contestants;
       const alive = roster.filter((c) => !isEliminated(c)).length;
       const winner = !!winnerId && roster.some((c) => c.id === winnerId);
-      return { ...p, roster, alive, winner };
+      // Points leagues score every roster member every episode (lib/points.ts);
+      // last-standing leagues only ever cared about who's still in.
+      const points = isPointsLeague ? roster.reduce((n, c) => n + pointsFor(root, c.id).total, 0) : 0;
+      return { ...p, roster, alive, winner, points };
     })
-    .sort((a, b) => Number(b.winner) - Number(a.winner) || b.alive - a.alive || a.name.localeCompare(b.name));
+    .sort((a, b) => isPointsLeague
+      ? b.points - a.points || a.name.localeCompare(b.name)
+      : Number(b.winner) - Number(a.winner) || b.alive - a.alive || a.name.localeCompare(b.name));
 
   const ds = lg.draftState;
   const draftPending = !drafted && !!ds && !ds.complete;
@@ -69,6 +77,19 @@ export default function StandingsScreen({ navigation }: Props) {
   // Practice only concerns leagues that still draft here, not seeded rosters.
   const practiceOn = !!root.draftPractice && (!drafted || draftLive);
   const remaining = contestants.filter((c) => c && !isEliminated(c)).length;
+
+  // Collapsed by default so a big league doesn't turn into an endless scroll —
+  // only your own row opens automatically. Tapping a header toggles it.
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set(teamId ? [teamId] : []));
+  const toggle = (id: string) => setExpanded((prev) => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  // Two sub-tabs so recaps are one tap away instead of the bottom of a long
+  // scroll — same in-page pattern as Predictions/Games (SegmentedTabs).
+  const [tab, setTab] = useState<'standings' | 'recaps'>('standings');
 
   return (
     <View style={styles.container}>
@@ -79,12 +100,24 @@ export default function StandingsScreen({ navigation }: Props) {
         <ImageBackground source={COUNTDOWN_BG[theme]} style={styles.countdownBg} resizeMode="cover">
           {/* Fixed dark scrim + light type: the photo is the same in every
               theme, so the text can't follow the palette and stay readable. */}
-          <Text style={styles.countdownLabel}>{countdown.label.toUpperCase()}</Text>
-          <Text style={styles.countdownClock}>{countdown.clock}</Text>
+          <View style={styles.countdownRow}>
+            <Text style={styles.countdownLabel}>{countdown.label.toUpperCase()}</Text>
+            <Text style={styles.countdownClock}>{countdown.clock}</Text>
+          </View>
           <Text style={styles.countdownMeta}>{remaining} of {contestants.length} {terms.units} still in</Text>
         </ImageBackground>
       </View>
 
+      <SegmentedTabs
+        tabs={[{ key: 'standings', label: 'Standings' }, { key: 'recaps', label: 'Episode Recaps' }]}
+        value={tab}
+        onChange={setTab}
+      />
+
+      {tab === 'recaps' ? (
+        <EpisodeSummary root={root} league={lg} leagueKey={leagueKey} />
+      ) : (
+      <>
       <TribeLegend root={root} />
 
       {(practiceOn || draftPending || draftLive) && (
@@ -106,21 +139,30 @@ export default function StandingsScreen({ navigation }: Props) {
         // entry should both see it marked as theirs.
         const isMe = p.id === teamId;
         const slots = Math.max(lg.picksPerPlayer || 0, p.roster.length);
+        const isOpen = expanded.has(p.id);
         return (
           <Panel key={p.id} style={[styles.row, p.winner && styles.rowWinner]}>
-            <View style={styles.rowHead}>
+            <Pressable style={styles.rowHead} onPress={() => toggle(p.id)}>
               <View style={styles.playerIdentity}>
                 <TeamAvatar entry={p} avatars={avatars} leagueKey={leagueKey} size={30} />
                 <Text style={styles.playerName}>{p.name}{isMe ? ' (you)' : ''}</Text>
               </View>
-              {/* No "N still in" count — the cards below already show who's out. */}
-              {(p.winner || !p.roster.length) && (
-                <Text style={[styles.badge, p.winner && styles.badgeWinner, !p.roster.length && styles.badgeMuted]}>
-                  {p.winner ? 'League Winner' : drafted ? 'No picks' : 'Draft TBD'}
-                </Text>
-              )}
-            </View>
-            <View style={styles.picks}>
+              <View style={styles.rowHeadRight}>
+                {!!p.roster.length && (
+                  <Text style={styles.aliveCount}>
+                    {isPointsLeague ? `${p.points} pt${p.points === 1 ? '' : 's'}` : `${p.alive}/${p.roster.length} in`}
+                  </Text>
+                )}
+                {/* No "N still in" count on the badge — the cards below already show who's out. */}
+                {(p.winner || !p.roster.length) && (
+                  <Text style={[styles.badge, p.winner && styles.badgeWinner, !p.roster.length && styles.badgeMuted]}>
+                    {p.winner ? 'League Winner' : drafted ? 'No picks' : 'Draft TBD'}
+                  </Text>
+                )}
+                <Ionicons name={isOpen ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textDim} />
+              </View>
+            </Pressable>
+            {isOpen && <View style={styles.picks}>
               {Array.from({ length: slots }, (_, i) => {
                 const c = p.roster[i];
                 if (!c) {
@@ -139,6 +181,7 @@ export default function StandingsScreen({ navigation }: Props) {
                 // holding an idol, and are they a target. The rest is on their bio.
                 const idols = out ? 0 : idolCount(c.items);
                 const votes = seasonStatsFor(root, c.id).votes;
+                const castPoints = isPointsLeague ? pointsFor(root, c.id).total : 0;
                 // Tribe shows as the side border only (names are in the legend
                 // under the countdown), and only before the merge.
                 const where = out || stage === 'merged' ? null : tribe?.name;
@@ -155,6 +198,7 @@ export default function StandingsScreen({ navigation }: Props) {
                       <View style={styles.pickTop}>
                         <Text style={styles.pickName} numberOfLines={1}>{shortName(c.name)}</Text>
                         {shared && <Text style={styles.sharedTag}>SHARED</Text>}
+                        {isPointsLeague && <Text style={styles.castPoints}>{castPoints} pt{castPoints === 1 ? '' : 's'}</Text>}
                         {out && <OutBadge ep={c.eliminatedWeek as number} />}
                       </View>
                       {!!sub && (
@@ -173,12 +217,12 @@ export default function StandingsScreen({ navigation }: Props) {
                   </Pressable>
                 );
               })}
-            </View>
+            </View>}
           </Panel>
         );
       })}
-
-      <EpisodeSummary root={root} league={lg} leagueKey={leagueKey} />
+      </>
+      )}
       </ScrollView>
     </View>
   );
@@ -191,22 +235,25 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     borderRadius: 16, overflow: 'hidden',
     borderWidth: 1, borderColor: colors.line,
   },
-  countdownBg: { alignItems: 'center', paddingVertical: 24, paddingHorizontal: 16, gap: 5 },
+  // Compact: label + clock share one row instead of stacking three lines —
+  // this card is "what's next", not the focal point of the screen.
+  countdownBg: { alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, gap: 2 },
   countdownScrim: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: colors.photoScrim,
   },
+  countdownRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   countdownLabel: {
-    color: 'rgba(255,255,255,0.78)', fontSize: 11, letterSpacing: 2, fontWeight: '700',
+    color: 'rgba(255,255,255,0.78)', fontSize: 10, letterSpacing: 1.5, fontWeight: '700',
     textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4,
   },
   countdownClock: {
-    color: colors.accentOnDark, fontSize: 30, fontWeight: '800',
+    color: colors.accentOnDark, fontSize: 18, fontWeight: '800',
     fontVariant: ['tabular-nums'], letterSpacing: 0.5,
     textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 6,
   },
   countdownMeta: {
-    color: 'rgba(255,255,255,0.88)', fontSize: 12.5,
+    color: 'rgba(255,255,255,0.88)', fontSize: 11,
     textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4,
   },
   draftCard: { backgroundColor: colors.panel2, borderColor: colors.accent },
@@ -219,6 +266,9 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   rowHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   playerIdentity: { flexDirection: 'row', alignItems: 'center', gap: 9, flexShrink: 1 },
   playerName: { color: colors.text, fontSize: 16, fontWeight: '700' },
+  rowHeadRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  aliveCount: { color: colors.textDim, fontSize: 12.5, fontWeight: '700' },
+  castPoints: { color: colors.accent, fontSize: 11, fontWeight: '800' },
   badge: { color: colors.green, fontSize: 11, fontWeight: '700', borderWidth: 1, borderColor: colors.green, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 2 },
   badgeWinner: { color: colors.accent, borderColor: colors.accent },
   badgeMuted: { color: colors.textDim, borderColor: colors.line },
