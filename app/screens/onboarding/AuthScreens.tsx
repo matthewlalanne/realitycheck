@@ -178,7 +178,7 @@ export function CodeScreen({ email, onBack, onVerified }: { email: string; onBac
   return (
     <Screen
       title="Check your email"
-      subtitle={`We sent a 6-digit code to ${email}. It expires in 10 minutes.`}
+      subtitle={`We sent a 6-digit code to ${email}. It expires in 10 minutes. Don't see it? Check your spam folder.`}
       onBack={onBack}
       primary={{ label: verifying ? 'Checking…' : 'Confirm', onPress: () => verify(code), disabled: code.length !== 6 || verifying }}
       secondary={{ label: resent ? 'Sent again' : "Didn't get it? Send again", onPress: resend }}
