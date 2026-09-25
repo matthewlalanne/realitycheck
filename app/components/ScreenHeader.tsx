@@ -56,11 +56,17 @@ export default function ScreenHeader({
             accessibilityRole="button"
             accessibilityLabel={`League: ${currentName}. Tap to switch.`}
           >
-            <Text style={styles.triggerText} numberOfLines={1}>{currentName}</Text>
+            <Text style={styles.triggerText}>Switch</Text>
             <Ionicons name="chevron-down" size={14} color={colors.accent} />
           </Pressable>
         )}
       </View>
+      {/* The league name gets its own line at full width instead of being
+          squeezed into the pill above, which cut off anything longer than a
+          couple words. */}
+      {(canSwitchLeagues || !!onExitLeague) && (
+        <Text style={styles.leagueName} numberOfLines={1}>{currentName}</Text>
+      )}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -145,7 +151,7 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     // Orchid rather than grey, so on the light theme the header's edge reads
     // as a soft glow instead of a smudge.
     shadowColor: colors.accent2,
-    shadowOpacity: 0.16,
+    shadowOpacity: 0.08,
     shadowRadius: 5,
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
@@ -167,9 +173,10 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.panel,
-    maxWidth: 170,
+    flexShrink: 0,
   },
-  triggerText: { color: colors.text, fontSize: 13, fontWeight: '700', flexShrink: 1 },
+  triggerText: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  leagueName: { color: colors.accent, fontSize: 13, fontWeight: '700', marginTop: 4 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' },
   menu: {
     position: 'absolute',
