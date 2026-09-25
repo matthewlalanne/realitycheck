@@ -59,7 +59,13 @@ exports.requestEmailCode = onCall(
     const resend = new Resend(RESEND_API_KEY.value());
     try {
       await resend.emails.send({
-        from: "Reality Check <sign-in@playrealitycheck.app>",
+        // Resend's shared test sender — works with zero DNS setup. Swap for a
+        // verified domain (see README "Auth setup") once one's set up; the old
+        // sign-in@playrealitycheck.app was never a real, verified domain (this
+        // project's only real domain is playrealitycheck.web.app, a Firebase
+        // Hosting subdomain that can't take Resend's DNS records anyway), so
+        // every send silently failed at Resend.
+        from: "Reality Check <onboarding@resend.dev>",
         to: email,
         subject: `${code} is your Reality Check code`,
         text: `Your sign-in code is ${code}. It expires in 10 minutes.\n\nDidn't request this? You can ignore it.`,
