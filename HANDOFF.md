@@ -76,6 +76,13 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
   (this container can't reach the RTDB endpoint): run
   `firebase deploy --only database --project tribe-league-app` from the Mac.
 
+- Survivor 51 in Reality Check is a one-way copy of Outlast's Denver
+  league. Refresh after each episode with `scripts/seed-seasons.sh` (reads
+  Outlast, never writes it). Anything done inside Reality Check's copy is
+  overwritten on refresh — play Survivor in Outlast. The old
+  import-from-outlast.sh was deleted: it wrote the pre-multi-show layout
+  and would have replaced every Reality Check avatar.
+
 ## What only Matt (or his Mac) can do
 - Firebase deploys: done from here now — `FIREBASE_TOKEN` is in this
   environment and confirmed working (`firebase functions:list` shows all 7

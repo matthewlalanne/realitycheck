@@ -67,7 +67,7 @@ this app's own.
       (`components/CastAvatar.tsx`); "not affiliated" disclaimer in Settings.
 - [x] Simulator demo code removed.
 - [x] Own Firebase project + Realtime Database, rules deployed.
-- [x] League data copied one way (`scripts/import-from-outlast.sh`, re-runnable).
+- [x] League data copied one way from Outlast into `seasons/survivor-51` (`scripts/seed-seasons.sh`; re-run after each episode to refresh — it only ever reads Outlast).
 - [x] **Sign-in deployed.** Email code (`requestEmailCode` / `verifyEmailCode`)
       and Google (`googleSignIn`) Cloud Functions are live on `tribe-league-app`
       (confirmed 2026-09-25 via `firebase functions:list`), Blaze plan is
