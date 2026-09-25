@@ -15,7 +15,8 @@ import EpisodeSummary from '../../components/EpisodeSummary';
 import CastAvatar from '../../components/CastAvatar';
 import { useLeague } from '../../contexts/LeagueContext';
 import { useEpisodeCountdown } from '../../lib/countdown';
-import { isEliminated, shortName, ownersOf, rosterIds, soleSurvivorId } from '../../lib/state';
+import { isEliminated, shortName, ownersOf } from '../../lib/state';
+import { rankedStandings } from '../../lib/standings';
 import { tribeOf } from '../../lib/tribes';
 import { idolCount, seasonStatsFor, stageOf } from '../../lib/seasonStats';
 import { pointsFor } from '../../lib/points';
@@ -55,21 +56,8 @@ export default function StandingsScreen({ navigation }: Props) {
   const byId = new Map(contestants.filter(Boolean).map((c) => [c.id, c]));
 
   const drafted = Object.keys(lg.picks || {}).length > 0;
-  const winnerId = soleSurvivorId(root);
   const isPointsLeague = lg.style === 'points';
-  const ranked = [...lg.players]
-    .map((p) => {
-      const roster = rosterIds(lg, p.id).map((cid) => byId.get(cid)).filter(Boolean) as typeof contestants;
-      const alive = roster.filter((c) => !isEliminated(c)).length;
-      const winner = !!winnerId && roster.some((c) => c.id === winnerId);
-      // Points leagues score every roster member every episode (lib/points.ts);
-      // last-standing leagues only ever cared about who's still in.
-      const points = isPointsLeague ? roster.reduce((n, c) => n + pointsFor(root, c.id).total, 0) : 0;
-      return { ...p, roster, alive, winner, points };
-    })
-    .sort((a, b) => isPointsLeague
-      ? b.points - a.points || a.name.localeCompare(b.name)
-      : Number(b.winner) - Number(a.winner) || b.alive - a.alive || a.name.localeCompare(b.name));
+  const ranked = rankedStandings(root, lg, leagueKey);
 
   const ds = lg.draftState;
   const draftPending = !drafted && !!ds && !ds.complete;
@@ -144,7 +132,9 @@ export default function StandingsScreen({ navigation }: Props) {
           <Panel key={p.id} style={[styles.row, p.winner && styles.rowWinner]}>
             <Pressable style={styles.rowHead} onPress={() => toggle(p.id)}>
               <View style={styles.playerIdentity}>
-                <TeamAvatar entry={p} avatars={avatars} leagueKey={leagueKey} size={30} />
+                <Pressable onPress={() => navigation.navigate('TeamProfile', { playerId: p.id })} hitSlop={6}>
+                  <TeamAvatar entry={p} avatars={avatars} leagueKey={leagueKey} size={30} />
+                </Pressable>
                 <Text style={styles.playerName}>{p.name}{isMe ? ' (you)' : ''}</Text>
               </View>
               <View style={styles.rowHeadRight}>

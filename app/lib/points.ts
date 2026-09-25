@@ -23,6 +23,7 @@ export const POINTS = {
   finalThree: 10,   // voted out (or eliminated at fire) in the finale episode itself
   winner: 20,       // the one castaway with no eliminatedWeek once the season is over
   quitOrMedical: -10,
+  predictionCorrect: 3,  // correctly called an episode's boot (opt-in — see LeagueRecord.countPredictions)
 };
 
 export type PointLine = { ep: number; label: string; points: number };

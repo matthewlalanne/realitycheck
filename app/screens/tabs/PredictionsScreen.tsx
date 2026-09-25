@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useScrollToTop } from '@react-navigation/native';
+import { useNavigation, useScrollToTop } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Alert, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { RootStackParamList } from '../../navigation';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import type { ColorScheme } from '../../theme';
 import Panel from '../../components/Panel';
@@ -34,6 +36,7 @@ export default function PredictionsScreen() {
   // every other iOS app behaves.
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // League choice lives in LeagueContext — the header switcher drives it.
   const { root, leagueKey: predKey, league: lg, playerId, terms } = useLeague();
   const week = predictionEpisodeNumber(predKey);
@@ -293,12 +296,12 @@ export default function PredictionsScreen() {
         <Panel style={styles.listPanel}>
           {!anyWins && <Text style={styles.hint}>No episodes scored yet — the first one counts after the premiere.</Text>}
           {board.map((b, i) => (
-            <View key={b.id} style={styles.listRow}>
+            <Pressable key={b.id} style={styles.listRow} onPress={() => navigation.navigate('TeamProfile', { playerId: b.id })}>
               <Text style={[styles.listName, b.id === playerId && styles.listNameMe]}>{i + 1}. {b.name}</Text>
               <Text style={styles.listValue}>
                 {b.wins} correct{betting && b.wins > 0 ? ` · ${fmtMoney(b.wins * WEEKLY_BET * 100)}+` : ''}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </Panel>
 

@@ -21,6 +21,9 @@ export type RootStackParamList = {
   Tribes: undefined;
   // A published episode as a full page: facts up top, the recap below.
   EpisodeRecap: { episode: number };
+  // A player's own page: roster status, rank/points, prediction record.
+  // Pushed from Standings, chat, and the Predictions leaderboard.
+  TeamProfile: { playerId: string };
 };
 
 export type MainTabParamList = {

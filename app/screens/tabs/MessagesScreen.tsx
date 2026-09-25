@@ -19,7 +19,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { useIsFocused } from '@react-navigation/native';
+import { useIsFocused, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../../navigation';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import type { ColorScheme } from '../../theme';
 import { PinnedHeader, CONTENT_TOP_GAP } from '../../components/ScreenHeader';
@@ -64,6 +66,7 @@ export default function MessagesScreen() {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
   const { root, leagueKey, league, playerId, playerName } = useLeague();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const messages = messagesFor(root, leagueKey);
   const avatars = useAvatars();
   const [draft, setDraft] = useState('');
@@ -245,12 +248,14 @@ export default function MessagesScreen() {
                 <Text style={styles.stamp} numberOfLines={1}>{messageTime(item.createdAt)}</Text>
                 <View style={[styles.bubbleRow, mine && styles.bubbleRowMine]}>
                 {!mine && (
-                  <Avatar
-                    name={item.authorName}
-                    color={colors.accent2}
-                    size={28}
-                    uri={avatarFor(avatars, item.authorId, [], leagueKey)}
-                  />
+                  <Pressable onPress={() => navigation.navigate('TeamProfile', { playerId: item.authorId })} hitSlop={6}>
+                    <Avatar
+                      name={item.authorName}
+                      color={colors.accent2}
+                      size={28}
+                      uri={avatarFor(avatars, item.authorId, [], leagueKey)}
+                    />
+                  </Pressable>
                 )}
                 <Pressable
                   ref={(node) => { bubbleRefs.set(item.id, node); }}
@@ -265,7 +270,11 @@ export default function MessagesScreen() {
                   ]}
                   accessibilityHint="Press and hold to react"
                 >
-                  {!mine && <Text style={styles.author}>{item.authorName}</Text>}
+                  {!mine && (
+                    <Text style={styles.author} onPress={() => navigation.navigate('TeamProfile', { playerId: item.authorId })}>
+                      {item.authorName}
+                    </Text>
+                  )}
                   {item.gif ? (
                     // Sized from the GIF's own proportions, capped so a tall
                     // one can't take over the screen.

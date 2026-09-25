@@ -16,6 +16,7 @@ import EpisodeManagerScreen from './screens/EpisodeManagerScreen';
 import EpisodeEditorScreen from './screens/EpisodeEditorScreen';
 import TribesScreen from './screens/TribesScreen';
 import EpisodeRecapScreen from './screens/EpisodeRecapScreen';
+import TeamProfileScreen from './screens/TeamProfileScreen';
 import OnboardingFlow from './screens/onboarding/OnboardingFlow';
 import { useLastLeague } from './lib/lastLeague';
 import { useLeagueRoot } from './lib/state';
@@ -123,6 +124,7 @@ function RootNavigator() {
         <Stack.Screen name="EpisodeEditor" component={EpisodeEditorScreen} />
         <Stack.Screen name="Tribes" component={TribesScreen} />
         <Stack.Screen name="EpisodeRecap" component={EpisodeRecapScreen} />
+        <Stack.Screen name="TeamProfile" component={TeamProfileScreen} />
       </Stack.Navigator>
       {/* Above the navigator so a pick announces on whatever screen you're on. */}
       <DraftAnnouncement />

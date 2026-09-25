@@ -54,6 +54,11 @@ export type LeagueRecord = {
   maxOwners?: number;
   /** 'last-standing' (default) or 'points'. */
   style?: 'last-standing' | 'points';
+  /** Points leagues only, default off: fold each player's correct weekly
+   *  predictions into their point total (lib/points.ts POINTS.predictionCorrect).
+   *  Off by default so a league can keep predictions as a separate, lower-stakes
+   *  side game if members are wary of picks affecting the real standings. */
+  countPredictions?: boolean;
   /** Draft start, ISO. */
   draftAt?: string | null;
   /** How the draft runs: live in the app, or the commissioner enters picks. */
