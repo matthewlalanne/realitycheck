@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "W4L7JP7DQ8.com.mattlalanne.realitycheck",
+        "paths": ["/join/*"]
+      }
+    ]
+  }
+}
