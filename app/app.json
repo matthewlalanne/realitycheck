@@ -1,23 +1,24 @@
 {
   "expo": {
-    "name": "Confessional",
-    "slug": "tribe-league",
+    "name": "Reality Check",
+    "slug": "realitycheck",
     "version": "0.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mattlalanne.tribeleague",
+      "bundleIdentifier": "com.mattlalanne.realitycheck",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "Confessional uses your photos so you can set a profile picture and castaway photos for your league."
-      }
+        "NSPhotoLibraryUsageDescription": "Reality Check uses your photos so you can set a profile picture and cast photos for your league."
+      },
+      "associatedDomains": ["applinks:playrealitycheck.web.app"]
     },
     "android": {
-      "package": "com.mattlalanne.tribeleague",
+      "package": "com.mattlalanne.realitycheck",
       "adaptiveIcon": {
-        "backgroundColor": "#160f26",
+        "backgroundColor": "#fdc288",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -32,6 +33,14 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "https", "host": "playrealitycheck.web.app", "pathPrefix": "/join" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "web": {
@@ -61,6 +70,11 @@
     "scheme": [
       "confessional",
       "com.googleusercontent.apps.70015212666-ekju6ubos86e28a0e35jp7lb9r4nsm18"
-    ]
+    ],
+    "splash": {
+      "image": "./assets/brand/splash.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#fdc288"
+    }
   }
 }

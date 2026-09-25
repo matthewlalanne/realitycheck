@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.mattlalanne.realitycheck",
+      "sha256_cert_fingerprints": [
+        "4D:4F:DD:4B:BB:91:C5:DF:DE:F0:BE:6E:95:36:8C:37:75:04:91:32:2B:34:54:8D:88:26:C6:90:D7:62:1B:21"
+      ]
+    }
+  }
+]
