@@ -48,6 +48,7 @@ export default function BioScreen({ route, navigation }: Props) {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   if (!contestant) return null;
 
+  const hasPhoto = !!league.castPhotos?.[contestant.id];
   const changePhoto = async () => {
     setUploadingPhoto(true);
     try { await pickAndStoreCastPhoto(leagueKey, contestant.id); } finally { setUploadingPhoto(false); }
@@ -88,21 +89,35 @@ export default function BioScreen({ route, navigation }: Props) {
             {!!ownerNames && <Text style={styles.outBannerSub}>{ownerNames}'s pick</Text>}
           </View>
         ) : null}
-        <View style={[styles.heroFrame, !!outEp && styles.heroFrameOut]}>
-          <CastAvatar id={contestant.id} style={styles.heroImage} />
-          {!!outEp && <OutWash />}
-          {/* Every league uploads its own cast photos — there are no network
-              photos here (CBS's, not ours) — so this is the only way a photo
-              ever shows up instead of initials. */}
-          <Pressable style={styles.photoEditBtn} onPress={changePhoto} disabled={uploadingPhoto} hitSlop={6}>
-            {uploadingPhoto ? <ActivityIndicator color="#fff" size="small" /> : (
+        {hasPhoto ? (
+          <View style={[styles.heroFrame, !!outEp && styles.heroFrameOut]}>
+            <CastAvatar id={contestant.id} style={styles.heroImage} />
+            {!!outEp && <OutWash />}
+            {/* Every league uploads its own cast photos — there are no network
+                photos here (CBS's, not ours) — so this is the only way a
+                photo ever shows up instead of initials. */}
+            <Pressable style={styles.photoEditBtn} onPress={changePhoto} disabled={uploadingPhoto} hitSlop={6}>
+              {uploadingPhoto ? <ActivityIndicator color="#fff" size="small" /> : (
+                <>
+                  <Ionicons name="camera" size={14} color="#fff" />
+                  <Text style={styles.photoEditText}>Change photo</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+        ) : (
+          // No uploaded photo: skip the big framed placeholder — a
+          // full-width box of nothing but initials looked like a broken
+          // image, not a picture. Just a small button to add one instead.
+          <Pressable style={styles.addPhotoRow} onPress={changePhoto} disabled={uploadingPhoto}>
+            {uploadingPhoto ? <ActivityIndicator color={colors.accent} size="small" /> : (
               <>
-                <Ionicons name="camera" size={14} color="#fff" />
-                <Text style={styles.photoEditText}>{league.castPhotos?.[contestant.id] ? 'Change photo' : 'Add photo'}</Text>
+                <Ionicons name="camera-outline" size={16} color={colors.accent} />
+                <Text style={styles.addPhotoText}>Add a photo</Text>
               </>
             )}
           </Pressable>
-        </View>
+        )}
         {/* Eyebrow: whose castaway this is. Voted-out bios say it in the banner instead. */}
         <View style={styles.nameBlock}>
           {!outEp && <Text style={[styles.eyebrow, owners.includes(teamId) && styles.eyebrowMine]}>{pickLabel.toUpperCase()}</Text>}
@@ -252,6 +267,11 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     minWidth: 32, minHeight: 28, justifyContent: 'center',
   },
   photoEditText: { color: '#fff', fontSize: 12.5, fontWeight: '700' },
+  addPhotoRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    paddingVertical: 4,
+  },
+  addPhotoText: { color: colors.accent, fontSize: 13, fontWeight: '700' },
   nameBlock: { gap: 3, marginTop: 4 },
   eyebrow: { color: colors.textDim, fontSize: 12, fontWeight: '800', letterSpacing: 1.4 },
   eyebrowMine: { color: colors.accent },
