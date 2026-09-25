@@ -8,7 +8,8 @@ import FlipCard from '../../components/FlipCard';
 import ScoreModal from '../../components/ScoreModal';
 import LeaderboardPanel from '../../components/LeaderboardPanel';
 import { useLeaderboard } from '../../lib/leaderboard';
-import { contestants } from '../../data/realData';
+import { useLiveContestants } from '../../lib/episodes';
+import { useLeague } from '../../contexts/LeagueContext';
 import CastAvatar from '../../components/CastAvatar';
 
 // Same three sizes as the site (Survivor League/app.js MEMORY_PAIR_OPTIONS) —
@@ -48,6 +49,12 @@ export default function MemoryGame({ boardWidth }: { boardWidth: number }) {
   const [showScoreModal, setShowScoreModal] = useState(false);
   const startRef = useRef(0);
   const { scores, record } = useLeaderboard('memory', String(pairs));
+  const { contestants, loading } = useLiveContestants();
+  const { terms } = useLeague();
+  // A small cast (e.g. a dry-run show) can't fill every pair size — only
+  // offer sizes the live cast can actually cover.
+  const sizeOptions = PAIR_OPTIONS.filter((n) => n <= contestants.length);
+  const maxPairs = sizeOptions[sizeOptions.length - 1] ?? PAIR_OPTIONS[0];
 
   useEffect(() => {
     if (!started || solved) return;
@@ -117,27 +124,36 @@ export default function MemoryGame({ boardWidth }: { boardWidth: number }) {
   const cardSize = (boardWidth - CARD_GAP * (COLUMNS - 1)) / COLUMNS;
 
   if (!started) {
+    const activePairs = sizeOptions.includes(pairs) ? pairs : maxPairs;
     return (
       <View style={{ gap: 12 }}>
         <Panel style={{ gap: 12 }}>
           <Text style={styles.introTitle}>🌿 Memory Match</Text>
-          <Text style={styles.introBody}>Match every castaway with their twin tile.</Text>
-          <View style={styles.sizeRow}>
-            {PAIR_OPTIONS.map((n) => (
-              <Pressable
-                key={n}
-                style={[styles.sizeChip, pairs === n && styles.sizeChipActive]}
-                onPress={() => setPairs(n)}
-              >
-                <Text style={[styles.sizeChipText, pairs === n && styles.sizeChipTextActive]}>{n} pairs</Text>
+          <Text style={styles.introBody}>Match every {terms.unit} with their twin tile.</Text>
+          {loading ? (
+            <Text style={styles.introBody}>Loading the cast…</Text>
+          ) : sizeOptions.length === 0 ? (
+            <Text style={styles.introBody}>Not enough of the cast is in yet to play.</Text>
+          ) : (
+            <>
+              <View style={styles.sizeRow}>
+                {sizeOptions.map((n) => (
+                  <Pressable
+                    key={n}
+                    style={[styles.sizeChip, activePairs === n && styles.sizeChipActive]}
+                    onPress={() => setPairs(n)}
+                  >
+                    <Text style={[styles.sizeChipText, activePairs === n && styles.sizeChipTextActive]}>{n} pairs</Text>
+                  </Pressable>
+                ))}
+              </View>
+              <Pressable style={styles.beginButton} onPress={() => begin(activePairs)}>
+                <Text style={styles.beginButtonText}>Begin</Text>
               </Pressable>
-            ))}
-          </View>
-          <Pressable style={styles.beginButton} onPress={() => begin(pairs)}>
-            <Text style={styles.beginButtonText}>Begin</Text>
-          </Pressable>
+            </>
+          )}
         </Panel>
-        <LeaderboardPanel title={`Memory Leaderboard — ${pairs} pairs`} scores={scores} />
+        <LeaderboardPanel title={`Memory Leaderboard — ${activePairs} pairs`} scores={scores} />
       </View>
     );
   }
