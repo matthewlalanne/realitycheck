@@ -15,11 +15,45 @@ import { Screen, Note, Label, makeStyles as uiStyles } from './ui';
 
 const sunset = require('../../assets/brand/splash.jpg');
 
-// ---- Welcome -------------------------------------------------------------
+// ---- Landing: sign in or sign up ------------------------------------------
+//
+// Purely a familiar first choice — there's no actual difference underneath.
+// Both paths land on the same Google/email screen; an account is created
+// automatically the first time anyone signs in either way.
+
+export function LandingScreen({ onSignIn, onSignUp }: { onSignIn: () => void; onSignUp: () => void }) {
+  const colors = useThemeColors();
+  const styles = makeStyles(colors);
+  const insets = useSafeAreaInsets();
+  return (
+    <ImageBackground source={sunset} style={styles.hero} resizeMode="cover">
+      <StatusBar style="light" />
+      <View style={styles.scrim} />
+      <View style={[styles.heroInner, { paddingTop: insets.top + 60, paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
+        <View />
+        <View style={styles.buttons}>
+          <Pressable style={styles.google} onPress={onSignUp} accessibilityLabel="Sign up">
+            <Text style={styles.googleText}>Sign Up</Text>
+          </Pressable>
+          <Pressable style={styles.email} onPress={onSignIn} accessibilityLabel="Sign in">
+            <Text style={styles.emailText}>Sign In</Text>
+          </Pressable>
+          <Text style={styles.fine}>
+            Fan-made. Not affiliated with any network or show.
+          </Text>
+        </View>
+      </View>
+    </ImageBackground>
+  );
+}
+
+// ---- Google/email choice, reached after picking sign in or sign up -------
 
 export function WelcomeScreen({
-  onGoogle, onEmail,
+  mode, onBack, onGoogle, onEmail,
 }: {
+  mode: 'signin' | 'signup';
+  onBack: () => void;
   onGoogle: (info: { name: string | null; photoUrl: string | null }) => void;
   onEmail: () => void;
 }) {
@@ -60,9 +94,11 @@ export function WelcomeScreen({
           rendered here. */}
       <View style={styles.scrim} />
       <View style={[styles.heroInner, { paddingTop: insets.top + 60, paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
-        {/* The logo is part of the picture, identical to the loading screen. */}
-        <View />
+        <Pressable style={styles.backBtn} onPress={onBack} hitSlop={10}>
+          <Ionicons name="chevron-back" size={22} color="#fff" />
+        </Pressable>
         <View style={styles.buttons}>
+          <Text style={styles.authTitle}>{mode === 'signup' ? 'Create your account' : 'Welcome back'}</Text>
           <Pressable
             style={styles.google}
             onPress={google}
@@ -256,6 +292,8 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   hero: { flex: 1 },
   scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: colors.photoScrim },
   heroInner: { flex: 1, justifyContent: 'space-between', paddingHorizontal: 24 },
+  backBtn: { alignSelf: 'flex-start', padding: 4 },
+  authTitle: { color: '#fff', fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6 },
   wordmark: { color: colors.accentOnDark, fontFamily: wordmarkFont, fontSize: 44, letterSpacing: 3, marginRight: -3, textAlign: 'center' },
   kicker: { color: '#fff', fontSize: 14, fontWeight: '800', letterSpacing: 4, marginRight: -4, opacity: 0.85, marginTop: -4 },
   tagline: { color: '#fff', fontSize: 17, lineHeight: 23, textAlign: 'center', opacity: 0.92, maxWidth: 300 },

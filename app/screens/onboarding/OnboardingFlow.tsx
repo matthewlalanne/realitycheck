@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
-import { WelcomeScreen, EmailScreen, CodeScreen, ProfileScreen } from './AuthScreens';
+import { LandingScreen, WelcomeScreen, EmailScreen, CodeScreen, ProfileScreen } from './AuthScreens';
 import CreateLeagueWizard, { type CreatedInfo } from './CreateLeagueWizard';
 import { LeaguesHome, JoinScreen, InviteScreen } from './LeagueScreens';
 import { logOut, saveProfile, type MyLeague, type Profile } from '../../lib/account';
@@ -14,6 +14,7 @@ import { usePendingInviteCode } from '../../lib/deepLink';
 //   otherwise      -> your leagues, with create and join
 type Step =
   | { s: 'welcome' }
+  | { s: 'auth'; mode: 'signin' | 'signup' }
   | { s: 'email' }
   | { s: 'code'; email: string }
   | { s: 'home' }
@@ -51,7 +52,22 @@ export default function OnboardingFlow({
   if (!user) {
     if (step.s === 'email') return <EmailScreen onBack={() => setStep({ s: 'welcome' })} onCodeSent={(email) => setStep({ s: 'code', email })} />;
     if (step.s === 'code') return <CodeScreen email={step.email} onBack={() => setStep({ s: 'email' })} onVerified={() => {}} />;
-    return <WelcomeScreen onGoogle={() => {}} onEmail={() => setStep({ s: 'email' })} />;
+    if (step.s === 'auth') {
+      return (
+        <WelcomeScreen
+          mode={step.mode}
+          onBack={() => setStep({ s: 'welcome' })}
+          onGoogle={() => {}}
+          onEmail={() => setStep({ s: 'email' })}
+        />
+      );
+    }
+    return (
+      <LandingScreen
+        onSignIn={() => setStep({ s: 'auth', mode: 'signin' })}
+        onSignUp={() => setStep({ s: 'auth', mode: 'signup' })}
+      />
+    );
   }
 
   if (!profile) {
