@@ -55,10 +55,11 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 7. Then OTA fixes only: `eas update --channel <channel> --environment preview`.
 
 ## What only Matt (or his Mac) can do
-- Firebase deploys and DB seeding need the Firebase CLI logged in to
-  tribe-league-app. A cloud session has no login: give it `FIREBASE_TOKEN`
-  (`firebase login:ci`) or hand deploy commands to Matt.
-- EAS needs `EXPO_TOKEN` (expo.dev > Access tokens) in the cloud environment.
+- Firebase deploys: done from here now — `FIREBASE_TOKEN` is in this
+  environment and confirmed working (`firebase functions:list` shows all 7
+  functions live on `tribe-league-app`, Blaze plan active).
+- EAS needs `EXPO_TOKEN` (expo.dev > Access tokens) in the cloud environment —
+  not present here, so builds still need Matt's machine/login.
 - Apple/Google console steps, TestFlight invites, the iOS simulator.
 - Real sign-in testing (his ISP's certificate filter breaks Google sign-in in
   the simulator; use a hotspot or a real iPhone).
