@@ -1,0 +1,72 @@
+{
+  "expo": {
+    "name": "Confessional",
+    "slug": "tribe-league",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mattlalanne.tribeleague",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSPhotoLibraryUsageDescription": "Confessional uses your photos so you can set a profile picture and castaway photos for your league."
+      },
+      "icon": "./assets/icon.png"
+    },
+    "android": {
+      "package": "com.mattlalanne.tribeleague",
+      "adaptiveIcon": {
+        "backgroundColor": "#ff4d5a",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      "expo-audio",
+      "expo-image-picker",
+      "expo-asset",
+      "expo-image",
+      "@react-native-community/datetimepicker",
+      "expo-web-browser"
+    ],
+    "owner": "mattlalanne",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "6eb8546d-2e14-466f-94ea-7a81eb346841"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6eb8546d-2e14-466f-94ea-7a81eb346841"
+    },
+    "scheme": [
+      "confessional",
+      "com.googleusercontent.apps.70015212666-ekju6ubos86e28a0e35jp7lb9r4nsm18"
+    ],
+    "splash": {
+      "image": "./assets/brand/splash.jpg",
+      "resizeMode": "cover",
+      "backgroundColor": "#ff4d5a"
+    }
+  }
+}
