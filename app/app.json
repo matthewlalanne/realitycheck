@@ -13,7 +13,9 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "Reality Check uses your photos so you can set a profile picture and cast photos for your league."
       },
-      "associatedDomains": ["applinks:playrealitycheck.web.app"]
+      "associatedDomains": [
+        "applinks:playrealitycheck.web.app"
+      ]
     },
     "android": {
       "package": "com.mattlalanne.realitycheck",
@@ -38,10 +40,20 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "https", "host": "playrealitycheck.web.app", "pathPrefix": "/join" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "https",
+              "host": "playrealitycheck.web.app",
+              "pathPrefix": "/join"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
