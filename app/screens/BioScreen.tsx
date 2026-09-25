@@ -9,7 +9,7 @@ import Panel from '../components/Panel';
 import BackButton from '../components/BackButton';
 import NoteEditor from '../components/NoteEditor';
 import { useLeague } from '../contexts/LeagueContext';
-import { contestants } from '../data/realData';
+import { useLiveContestants } from '../lib/episodes';
 import CastAvatar from '../components/CastAvatar';
 import { bios } from '../data/bios';
 import { noteOf, rankOf, useMyBoard } from '../lib/board';
@@ -25,11 +25,12 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Bio'>;
 export default function BioScreen({ route, navigation }: Props) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
+  const { contestants } = useLiveContestants();
   const contestant = contestants.find((c) => c.id === route.params.id);
   const bio = bios[route.params.id];
   // Reading the bio is exactly when you change your mind about someone, so the
   // note box and the move buttons are right here rather than a screen away.
-  const { root, league, leagueKey, playerId, teamId } = useLeague();
+  const { root, league, leagueKey, playerId, teamId, terms } = useLeague();
   const outEp = root.contestants?.find((c) => c?.id === route.params.id)?.eliminatedWeek ?? null;
   // Who drafted them in the league you're viewing (a couple shares one entry).
   const owners = ownersOf(league, route.params.id);
@@ -76,7 +77,7 @@ export default function BioScreen({ route, navigation }: Props) {
             carries eliminations, so this reads the live record. */}
         {outEp ? (
           <View style={styles.outBanner}>
-            <Text style={styles.outBannerTitle}>VOTED OUT · EPISODE {outEp}</Text>
+            <Text style={styles.outBannerTitle}>{terms.out.toUpperCase()} · EPISODE {outEp}</Text>
             {!!ownerNames && <Text style={styles.outBannerSub}>{ownerNames}'s pick</Text>}
           </View>
         ) : null}
@@ -90,10 +91,10 @@ export default function BioScreen({ route, navigation }: Props) {
           <Text style={[styles.name, { marginTop: 0 }]}>{contestant.name}</Text>
         </View>
 
-        {(
+        {(terms.hasStats || terms.hasIdols || epLines.length > 0) && (
           <Panel style={styles.seasonPanel}>
             <Text style={styles.seasonTitle}>SEASON SO FAR{tribe ? ` · ${tribe.name.toUpperCase()}` : ''}</Text>
-            {(
+            {terms.hasStats && (
               <View style={styles.tiles}>
                 {tiles.map((t) => (
                   <View key={t.label} style={styles.tile}>
@@ -103,7 +104,7 @@ export default function BioScreen({ route, navigation }: Props) {
                 ))}
               </View>
             )}
-            {(
+            {terms.hasIdols && (
               <View style={styles.heldWrap}>
                 <Text style={styles.seasonSub}>Holding</Text>
                 {held.length === 0 && <Text style={styles.heldNone}>Nothing right now</Text>}
@@ -175,8 +176,9 @@ export default function BioScreen({ route, navigation }: Props) {
         </Panel>
 
         <Panel style={styles.metaPanel}>
-          <MetaRow label="Age" value={String(contestant.age)} />
-          <MetaRow label="Hometown" value={bio?.hometown ?? contestant.from} />
+          {contestant.detail && <MetaRow label="Team" value={contestant.detail} />}
+          {!!contestant.age && <MetaRow label="Age" value={String(contestant.age)} />}
+          <MetaRow label="Hometown" value={bio?.hometown ?? contestant.from ?? ''} />
           {bio && <MetaRow label="Current residence" value={bio.residence} />}
           {bio && <MetaRow label="Occupation" value={bio.occupation} />}
         </Panel>

@@ -35,7 +35,7 @@ export default function CastScreen({ navigation }: Props) {
   const { contestants } = useLiveContestants();
   // Your own ranking and notes, shown here as a chip so the cast list doubles
   // as a reminder of what you already thought of someone.
-  const { root, leagueKey, playerId } = useLeague();
+  const { root, leagueKey, playerId, terms } = useLeague();
   const board = useBoard(leagueKey, playerId);
   return (
     <View style={styles.container}>
@@ -85,7 +85,9 @@ export default function CastScreen({ navigation }: Props) {
                 ) : null}
               </View>
               <Text style={styles.meta}>
-                {[`Age ${c.age}`, c.from].join('  ·  ')}
+                {terms.unit === 'team'
+                  ? [c.detail, c.from].filter(Boolean).join('  ·  ')
+                  : [`Age ${c.age}`, c.from].join('  ·  ')}
               </Text>
               {/* Occupation as its own line, same as the website's cast cards. */}
               {bios[c.id]?.occupation ? (
