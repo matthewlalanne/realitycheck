@@ -1,0 +1,29 @@
+<!doctype html><html lang=en><head><meta charset=utf-8><title>Get it on Android · Reality Check</title><style>
+:root{--bg:#160f26;--panel:#251c3d;--text:#f8eee1;--dim:#b9a6cb;--accent:#f2b673;--pink:#e8637f}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#160f26,#2a1a45 60%,#3b2350);min-height:100vh;color:var(--text);font:17px/1.6 -apple-system,system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:48px 20px 64px}
+h1{font-size:34px;letter-spacing:3px;margin:0;color:var(--accent)}
+.kick{letter-spacing:4px;font-size:13px;color:var(--dim);margin:4px 0 28px}
+a{color:var(--accent)}p,li{color:var(--text)}.dim{color:var(--dim);font-size:14px}
+.card{background:var(--panel);border-radius:16px;padding:20px;margin:20px 0}
+.btn{display:block;text-align:center;background:var(--accent);color:#1f1530;font-weight:800;text-decoration:none;border-radius:14px;padding:15px;font-size:17px}
+ol{padding-left:22px}li{margin:8px 0}
+nav{margin-top:40px;font-size:14px}nav a{margin-right:16px}
+</style><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><main>
+<h1>REALITY CHECK</h1><div class="kick">FOR ANDROID</div>
+<div class="card"><a class="btn" id="dl" href="#">Download the app</a><p class="dim" style="margin:10px 0 0;text-align:center">Android phones only. iPhone? Ask your commissioner for a TestFlight invite.</p></div>
+<ol>
+<li>Tap <b>Download the app</b> above.</li>
+<li>Open the downloaded file. If your phone asks, allow your browser to <b>install unknown apps</b> — Reality Check isn't in the Play Store yet.</li>
+<li>Tap <b>Install</b>, then open Reality Check and sign in with your email.</li>
+</ol>
+<p class="dim">Already installed? Updates arrive inside the app on their own — no need to download again.</p>
+<script>
+// Set to the EAS build's .apk URL once the Android build exists.
+var APK_URL = "";
+var a = document.getElementById("dl");
+if (APK_URL) a.href = APK_URL; else { a.textContent = "Download coming soon"; a.style.opacity = .5; a.removeAttribute("href"); }
+</script>
+<nav><a href="/">Home</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a></nav>
+<p class="dim">Reality Check is a fan-made fantasy app. It is not affiliated with, endorsed by, or sponsored by any TV network, production company, or show.</p>
+</main></body></html>
