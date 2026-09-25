@@ -7,6 +7,7 @@ import { useThemeColors } from '../contexts/ThemeContext';
 import type { ColorScheme } from '../theme';
 import Panel from './Panel';
 import { airedEpisodeCount } from '../lib/countdown';
+import { termsFor } from '../lib/season';
 import { isEliminated, type LeagueRecord, type LeagueRoot } from '../lib/state';
 import { recapParts } from '../lib/recap';
 
@@ -24,7 +25,7 @@ export default function EpisodeSummary({ root, leagueKey }: { root: LeagueRoot; 
   return (
     <Panel style={styles.panel}>
       <Text style={styles.heading}>Episodes</Text>
-      <Text style={styles.hint}>{stillIn} of {cast.length} castaways still in the game.</Text>
+      <Text style={styles.hint}>{stillIn} of {cast.length} {termsFor(root.meta).units} still in the game.</Text>
 
       {!weeks.length && <Text style={styles.hint}>Nothing yet — the premiere hasn't aired.</Text>}
 

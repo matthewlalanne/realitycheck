@@ -275,6 +275,71 @@ exports.joinLeague = onCall({ region: REGION }, async (request) => {
 });
 
 // ---------------------------------------------------------------------------
+// Auto draft
+//
+// A league set to 'auto' drafts itself at its draftAt time: snake order, each
+// person's turn takes the first still-available name on their own ranking
+// (draftBoards/<league>/<person>/order), then falls back to cast order.
+// Runs every minute; a league is only ever drafted once (draftState.started).
+
+function snake(order, rounds) {
+  const seq = [];
+  for (let r = 0; r < rounds; r++) seq.push(...(r % 2 === 0 ? order : [...order].reverse()));
+  return seq;
+}
+
+async function autoDraftLeague(db, seasonId, leagueKey, lg, cast) {
+  const players = (lg.players || []).map((p) => p.id);
+  if (!players.length) return;
+  const maxOwners = lg.maxOwners || 2;
+  const boards = (await db.ref(`draftBoards/${leagueKey}`).get()).val() || {};
+  let order = Array.isArray(lg.draftOrder) && lg.draftOrder.length === players.length ? lg.draftOrder : null;
+  if (!order) {
+    order = [...players];
+    for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  }
+  const seq = Array.isArray(lg.pickOrder) && lg.pickOrder.length === players.length * lg.picksPerPlayer
+    ? lg.pickOrder : snake(order, lg.picksPerPlayer || 1);
+  const owners = {};
+  const history = [];
+  const castIds = cast.filter(Boolean).map((c) => c.id);
+  for (const pid of seq) {
+    const board = (boards[pid] && boards[pid].order) || [];
+    const ranked = [...board.filter((id) => castIds.includes(id)), ...castIds];
+    const open = (id) => (owners[id] || []).length < maxOwners && !(owners[id] || []).includes(pid);
+    // Prefer someone nobody has taken yet while unpicked names remain, so the
+    // field is covered before anyone doubles up.
+    const unpicked = ranked.filter((id) => !(owners[id] || []).length);
+    const pick = unpicked.find(open) || ranked.find(open);
+    if (!pick) continue;
+    owners[pick] = [...(owners[pick] || []), pid];
+    history.push({ contestantId: pick, playerId: pid, at: Date.now() });
+  }
+  await db.ref(`seasons/${seasonId}/leagues/${leagueKey}`).update({
+    picks: owners,
+    draftOrder: order,
+    draftState: { started: true, complete: true, currentPickIndex: seq.length, history },
+  });
+  logger.info("auto drafted", { seasonId, leagueKey, picks: history.length });
+}
+
+exports.runScheduledDrafts = onSchedule({ schedule: "every 1 minutes", region: REGION }, async () => {
+  const db = getDatabase();
+  const catalog = (await db.ref("seasonCatalog").get()).val() || {};
+  const now = Date.now();
+  for (const seasonId of Object.keys(catalog)) {
+    const leagues = (await db.ref(`seasons/${seasonId}/leagues`).get()).val() || {};
+    const due = Object.entries(leagues).filter(([, lg]) =>
+      lg && lg.draftMode === "auto" && lg.draftAt && Date.parse(lg.draftAt) <= now && !(lg.draftState && lg.draftState.started));
+    if (!due.length) continue;
+    const cast = (await db.ref(`seasons/${seasonId}/contestants`).get()).val() || [];
+    for (const [key, lg] of due) {
+      try { await autoDraftLeague(db, seasonId, key, lg, cast); } catch (err) { logger.error("auto draft failed", { seasonId, key, err }); }
+    }
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Clears expired sign-in codes so authCodes doesn't grow forever.
 exports.pruneExpiredCodes = onSchedule(
   { schedule: "every 24 hours", region: REGION },

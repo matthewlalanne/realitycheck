@@ -13,7 +13,7 @@ import { signInWithGoogle } from '../../lib/googleAuth';
 import { StatusBar } from 'expo-status-bar';
 import { Screen, Note, Label, makeStyles as uiStyles } from './ui';
 
-const sunset = require('../../assets/backgrounds/dusk.jpg');
+const sunset = require('../../assets/brand/splash.jpg');
 
 // ---- Welcome -------------------------------------------------------------
 
@@ -54,12 +54,9 @@ export function WelcomeScreen({
     <ImageBackground source={sunset} style={styles.hero} resizeMode="cover">
       {/* Light clock over the dark photo, whatever the app theme. */}
       <StatusBar style="light" />
-      <View style={styles.scrim} />
       <View style={[styles.heroInner, { paddingTop: insets.top + 60, paddingBottom: Math.max(insets.bottom, 20) + 10 }]}>
-        <View style={{ alignItems: 'center', gap: 10 }}>
-          <Text style={styles.wordmark}>REALITY CHECK</Text>
-          <Text style={styles.kicker}>REALITY TV FANTASY</Text>
-        </View>
+        {/* The logo is part of the picture, identical to the loading screen. */}
+        <View />
         <View style={styles.buttons}>
           <Pressable
             style={styles.google}

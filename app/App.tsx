@@ -34,7 +34,7 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 
 // Keeps the branded Splash up for at least this long even when everything
 // loads instantly — a one-frame flash reads as a glitch, not a brand moment.
-const MIN_SPLASH_MS = 2600;
+const MIN_SPLASH_MS = 0;
 function useMinSplashDelay() {
   const [done, setDone] = useState(false);
   useEffect(() => {
