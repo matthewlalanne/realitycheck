@@ -1,0 +1,15 @@
+node_modules/
+.expo/
+dist/
+web-build/
+.firebase/
+*.log
+.DS_Store
+*.p8
+*.p12
+*.mobileprovision
+*.keystore
+google-services*.json
+GoogleService-Info.plist
+.env*
+functions/.secret.local

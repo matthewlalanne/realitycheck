@@ -1,0 +1,20 @@
+{
+  "database": {
+    "rules": "database.rules.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs22"
+  },
+  "hosting": {
+    "site": "playrealitycheck",
+    "public": "site",
+    "cleanUrls": false,
+    "rewrites": [
+      {
+        "source": "/join/**",
+        "destination": "/join/index.html"
+      }
+    ]
+  }
+}

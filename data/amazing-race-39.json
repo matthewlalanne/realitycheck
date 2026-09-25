@@ -1,0 +1,27 @@
+{
+  "showId": "amazing-race",
+  "season": 39,
+  "label": "Season 39",
+  "unit": "team",
+  "source": "Cast as announced by CBS pre-season (Wikipedia, Variety, Gold Derby), pulled 2026-09-25. Names/relationships/hometowns only; no photos or bios (rights).",
+  "episodes": [
+    { "n": 1, "airsLocal": "2026-09-30T21:30", "note": "Two-night premiere, night 1 (9:30 ET/PT)" },
+    { "n": 2, "airsLocal": "2026-10-01T21:30", "note": "Two-night premiere, night 2" },
+    { "n": 3, "airsLocal": "2026-10-07T21:30", "note": "Regular Wednesday slot from here; confirm time" }
+  ],
+  "teams": [
+    { "id": "krieger-lohman", "members": ["Ali Krieger", "Joanna Lohman"], "relationship": "Pro Athletes & Moms", "hometown": "Montclair, NJ / Silver Spring, MD" },
+    { "id": "tejcek", "members": ["Ann-Marie Tejcek", "Riley Tejcek"], "relationship": "Mother & Daughter", "hometown": "Carmel, IN / San Diego, CA" },
+    { "id": "tager", "members": ["Anuar Tager", "Andrea Tager Ballesca"], "relationship": "Father & Daughter", "hometown": "Houston, TX" },
+    { "id": "langlois-tribo", "members": ["Cody Langlois", "Jaime Tribo"], "relationship": "Siblings", "hometown": "Los Angeles, CA / Tinley Park, IL" },
+    { "id": "wilson-mcguire", "members": ["Conner Wilson", "Garrett McGuire"], "relationship": "Childhood Friends", "hometown": "Loomis, CA / Rocklin, CA" },
+    { "id": "dunmore", "members": ["Dafina Dunmore", "Saran Dunmore"], "relationship": "Sisters & Best Friends", "hometown": "Chicago, IL" },
+    { "id": "wilks-hamby", "members": ["Daisha Wilks", "Dalton Hamby"], "relationship": "Dating", "hometown": "Flat Rock, AL / Jacksonville, AL" },
+    { "id": "matter", "members": ["Doug Matter", "Dylan Matter"], "relationship": "Grandfather & Grandson", "hometown": "San Diego, CA" },
+    { "id": "taylor-vintimilla", "members": ["Erin Taylor", "Javi Vintimilla"], "relationship": "Married", "hometown": "Fort Lauderdale, FL" },
+    { "id": "rebhun-naso", "members": ["Jody Rebhun", "Jenn Naso"], "relationship": "Best Friends & Moms", "hometown": "Branford, CT / Larchmont, NY" },
+    { "id": "schultz", "members": ["Katie Schultz", "Charlotte Schultz"], "relationship": "Sisters", "hometown": "Murray, KY" },
+    { "id": "patterson", "members": ["Michelle Rozalski Patterson", "Matthew Patterson"], "relationship": "Married Parents", "hometown": "Rutherford, NJ" },
+    { "id": "johnson", "members": ["Zach Johnson", "Nate Johnson"], "relationship": "Brothers", "hometown": "Dallas, TX" }
+  ]
+}

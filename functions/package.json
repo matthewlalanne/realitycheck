@@ -1,0 +1,12 @@
+{
+  "name": "reality-check-functions",
+  "description": "Auth (email code + Google), push notifications, and the recap draft task for Reality Check",
+  "main": "index.js",
+  "private": true,
+  "engines": { "node": "22" },
+  "dependencies": {
+    "firebase-admin": "^13.0.2",
+    "firebase-functions": "^6.3.0",
+    "resend": "^4.0.1"
+  }
+}
