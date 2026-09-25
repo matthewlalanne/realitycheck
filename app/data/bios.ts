@@ -1,10 +1,20 @@
-// Castaway facts only: hometown, residence, occupation. The CBS cast Q&A text,
-// "three words" answers and official YouTube shorts from the private Outlast
-// app are deliberately left out: they belong to CBS.
+// Castaway facts only: hometown, residence, occupation. The CBS cast Q&A
+// text and "three words" answers from the private Outlast app are still
+// deliberately left out: rewording them is still their content, not ours.
+//
+// youtubeId/officialBioUrl are the lower-risk alternative: officialBioUrl
+// links out to CBS's own page instead of republishing it, and youtubeId
+// embeds their official video through YouTube's own player (fine under
+// YouTube's terms) rather than downloading and re-hosting the clip. Fill
+// these in yourself per contestant — find the real CBS bio URL and the
+// video ID (the part after "v=" or "shorts/" in the YouTube URL) from
+// CBS's own site/channel.
 export type Bio = {
   hometown: string;
   residence: string;
   occupation: string;
+  youtubeId?: string;
+  officialBioUrl?: string;
 };
 
 export const bios: Record<string, Bio> = {

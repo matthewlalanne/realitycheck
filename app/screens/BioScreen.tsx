@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { useThemeColors } from '../contexts/ThemeContext';
@@ -216,6 +217,25 @@ export default function BioScreen({ route, navigation }: Props) {
           {bio && <MetaRow label="Occupation" value={bio.occupation} />}
         </Panel>
 
+        {/* Their own official video/page, not our writeup — CBS's YouTube
+            player embedded as-is, and a link out to their bio rather than
+            copying its text. */}
+        {!!bio?.youtubeId && (
+          <View style={styles.videoFrame}>
+            <WebView
+              source={{ uri: `https://www.youtube.com/embed/${bio.youtubeId}` }}
+              allowsFullscreenVideo
+              style={styles.video}
+            />
+          </View>
+        )}
+        {!!bio?.officialBioUrl && (
+          <Pressable style={styles.officialLink} onPress={() => Linking.openURL(bio.officialBioUrl!)}>
+            <Ionicons name="open-outline" size={16} color={colors.accent} />
+            <Text style={styles.officialLinkText}>Read their official bio</Text>
+          </Pressable>
+        )}
+
       </ScrollView>
 
       <NoteEditor
@@ -294,6 +314,10 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   noteText: { color: colors.text, fontSize: 13.5, lineHeight: 19 },
   notePlaceholder: { color: colors.textDim, fontSize: 13 },
   metaPanel: { gap: 8 },
+  videoFrame: { width: '100%', aspectRatio: 16 / 9, borderRadius: 14, overflow: 'hidden', backgroundColor: '#000' },
+  video: { flex: 1, backgroundColor: '#000' },
+  officialLink: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start' },
+  officialLinkText: { color: colors.accent, fontSize: 13.5, fontWeight: '700' },
   seasonPanel: { gap: 8 },
   seasonTitle: { color: colors.accent2, fontSize: 11, fontWeight: '800', letterSpacing: 1.2 },
   tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
