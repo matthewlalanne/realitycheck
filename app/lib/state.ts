@@ -156,6 +156,28 @@ export function personNameIn(lg: LeagueRecord | undefined, personId: string): st
   return lg.players.find((p) => p.id === personId)?.name ?? null;
 }
 
+/**
+ * Renames a person's own display name within this league — the solo roster
+ * entry, or their slot on a shared one. Everyone sees this everywhere
+ * (Standings, chat, predictions) since they all read the name from here, not
+ * from the account profile.
+ */
+export function renamePersonIn(lgKey: string, lg: LeagueRecord, personId: string, name: string) {
+  const trimmed = clamp(name.trim(), LIMITS.personName);
+  if (!trimmed) return Promise.resolve();
+  const solo = lg.players.findIndex((p) => p.id === personId);
+  if (solo !== -1) {
+    return update(ref(rtdb, root_()), { [`leagues/${lgKey}/players/${solo}/name`]: trimmed });
+  }
+  for (let i = 0; i < lg.players.length; i++) {
+    const j = lg.players[i].members?.findIndex((m) => m.id === personId) ?? -1;
+    if (j !== -1) {
+      return update(ref(rtdb, root_()), { [`leagues/${lgKey}/players/${i}/members/${j}/name`]: trimmed });
+    }
+  }
+  return Promise.resolve();
+}
+
 /** Every league this person belongs to, in LEAGUE_KEYS order then the rest. */
 export function leaguesForPerson(root: LeagueRoot, personId: string): string[] {
   const all = Object.keys(root?.leagues || {});

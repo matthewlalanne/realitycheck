@@ -15,7 +15,7 @@ import Panel from '../../components/Panel';
 import { PinnedHeader, CONTENT_TOP_GAP } from '../../components/ScreenHeader';
 import { useLeague } from '../../contexts/LeagueContext';
 import { signOutOfLeague } from '../../lib/leagueAuth';
-import { clearMessages, draftDone } from '../../lib/state';
+import { clearMessages, draftDone, renamePersonIn } from '../../lib/state';
 import { CopyableCode } from '../onboarding/LeagueScreens';
 import Avatar from '../../components/Avatar';
 import { avatarFor, pickAndStoreAvatar, setAvatar, useAvatars } from '../../lib/avatars';
@@ -45,6 +45,9 @@ export default function SettingsScreen({ navigation }: Props) {
   // into every league you play in.
   const myAvatar = avatarFor(avatars, playerId, [], leagueKey) ?? null;
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(playerName);
+  const [nameSaving, setNameSaving] = useState(false);
   const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'downloading' | 'current' | 'error'>('idle');
 
   async function checkForUpdate() {
@@ -98,6 +101,10 @@ export default function SettingsScreen({ navigation }: Props) {
               Alert.alert("Couldn't remove your photo", 'Check your connection and try again.'))}
           />
         )}
+        <SettingsAction
+          label="Change name"
+          onPress={() => { setNameDraft(playerName); setEditingName(true); }}
+        />
         <Row label="Playing as" value={playerName} />
         <Row label="League" value={league.name} />
         <Row label="Role" value={isCommissioner ? 'Commissioner' : 'Player'} />
@@ -255,6 +262,46 @@ export default function SettingsScreen({ navigation }: Props) {
 
 
       </ScrollView>
+
+      <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}>
+        <View style={styles.nameBackdrop}>
+          <View style={styles.nameSheet}>
+            <Text style={styles.nameTitle}>Change your name</Text>
+            <Text style={styles.nameSub}>This is how everyone in {league.name} sees you.</Text>
+            <TextInput
+              style={styles.nameInput}
+              value={nameDraft}
+              onChangeText={setNameDraft}
+              placeholder="Your name"
+              placeholderTextColor={colors.textDim}
+              autoFocus
+              maxLength={60}
+            />
+            <View style={styles.nameButtons}>
+              <Pressable style={styles.nameCancel} onPress={() => setEditingName(false)}>
+                <Text style={styles.nameCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={[styles.nameSave, (!nameDraft.trim() || nameSaving) && { opacity: 0.5 }]}
+                disabled={!nameDraft.trim() || nameSaving}
+                onPress={async () => {
+                  setNameSaving(true);
+                  try {
+                    await renamePersonIn(leagueKey, league, playerId, nameDraft);
+                    setEditingName(false);
+                  } catch {
+                    Alert.alert("Couldn't save your name", 'Check your connection and try again.');
+                  } finally {
+                    setNameSaving(false);
+                  }
+                }}
+              >
+                <Text style={styles.nameSaveText}>{nameSaving ? 'Saving…' : 'Save'}</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -292,6 +339,19 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   section: { gap: 10 },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 13 },
   profileName: { color: colors.text, fontSize: 18, fontWeight: '800' },
+  nameBackdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', padding: 20 },
+  nameSheet: { backgroundColor: colors.panel2, borderRadius: 16, borderWidth: 1, borderColor: colors.line, padding: 16, gap: 10 },
+  nameTitle: { color: colors.text, fontSize: 17, fontWeight: '800' },
+  nameSub: { color: colors.textDim, fontSize: 12.5, marginTop: -4 },
+  nameInput: {
+    color: colors.text, fontSize: 16, backgroundColor: colors.bg2, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.line, paddingHorizontal: 12, paddingVertical: 10,
+  },
+  nameButtons: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  nameCancel: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', borderWidth: 1, borderColor: colors.line },
+  nameCancelText: { color: colors.textDim, fontSize: 14, fontWeight: '700' },
+  nameSave: { flex: 1, borderRadius: 10, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.accent },
+  nameSaveText: { color: colors.onAccent, fontSize: 14, fontWeight: '800' },
   profileMeta: { color: colors.textDim, fontSize: 13, marginTop: 1 },
   sectionTitle: { color: colors.accent, fontSize: 15, fontWeight: '700' },
   row: { flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: colors.line, paddingTop: 10 },

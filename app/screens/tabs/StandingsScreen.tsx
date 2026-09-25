@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Image, ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useScrollToTop } from '@react-navigation/native';
 import type { CompositeScreenProps } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -25,23 +25,13 @@ import TribeLegend from '../../components/TribeLegend';
 import SegmentedTabs from '../../components/SegmentedTabs';
 import { Ionicons } from '@expo/vector-icons';
 
-// One gradient per theme, always dark-toned so the white countdown type
-// reads the same in light and dark mode.
-const COUNTDOWN_BG = {
-  purple: require('../../assets/countdown/purple.jpg'),
-  green: require('../../assets/countdown/green.jpg'),
-  orange: require('../../assets/countdown/orange.jpg'),
-  blue: require('../../assets/countdown/blue.jpg'),
-  mono: require('../../assets/countdown/mono.jpg'),
-} as const;
-
 type Props = CompositeScreenProps<
   BottomTabScreenProps<MainTabParamList, 'Standings'>,
   NativeStackScreenProps<RootStackParamList>
 >;
 
 export default function StandingsScreen({ navigation }: Props) {
-  const { colors, theme } = useTheme();
+  const { colors } = useTheme();
   const styles = makeStyles(colors);
   // Tapping the tab you're already on jumps back to the top, the way
   // every other iOS app behaves.
@@ -84,26 +74,24 @@ export default function StandingsScreen({ navigation }: Props) {
       <PinnedHeader title={`Hi, ${playerName}`} />
       <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>
 
-      <View style={styles.countdownCard}>
-        <ImageBackground source={COUNTDOWN_BG[theme]} style={styles.countdownBg} resizeMode="cover">
-          {/* Fixed dark scrim + light type: the photo is the same in every
-              theme, so the text can't follow the palette and stay readable. */}
-          <View style={styles.countdownHead}>
-            <Text style={styles.countdownLabel}>{countdown.label.toUpperCase()}</Text>
-            <Text style={styles.countdownMeta}>{remaining}/{contestants.length} {terms.units} in</Text>
-          </View>
-          {/* Each unit its own block: a run-on "5d 06h 48m 06s" string was
-              hard to read at a glance. */}
-          <View style={styles.countdownUnits}>
-            {([['d', 'Days'], ['h', 'Hrs'], ['m', 'Min'], ['s', 'Sec']] as const).map(([k, unit]) => (
-              <View key={k} style={styles.countdownUnit}>
-                <Text style={styles.countdownNum}>{String(countdown.parts[k]).padStart(k === 'd' ? 1 : 2, '0')}</Text>
-                <Text style={styles.countdownUnitLabel}>{unit.toUpperCase()}</Text>
-              </View>
-            ))}
-          </View>
-        </ImageBackground>
-      </View>
+      {/* A plain themed card, not a colorful photo — this is "what's next",
+          not the visual focal point of the screen. */}
+      <Panel style={styles.countdownCard}>
+        <View style={styles.countdownHead}>
+          <Text style={styles.countdownLabel}>{countdown.label.toUpperCase()}</Text>
+          <Text style={styles.countdownMeta}>{remaining}/{contestants.length} {terms.units} in</Text>
+        </View>
+        {/* Each unit its own block: a run-on "5d 06h 48m 06s" string was
+            hard to read at a glance. */}
+        <View style={styles.countdownUnits}>
+          {([['d', 'Days'], ['h', 'Hrs'], ['m', 'Min'], ['s', 'Sec']] as const).map(([k, unit]) => (
+            <View key={k} style={styles.countdownUnit}>
+              <Text style={styles.countdownNum}>{String(countdown.parts[k]).padStart(k === 'd' ? 1 : 2, '0')}</Text>
+              <Text style={styles.countdownUnitLabel}>{unit.toUpperCase()}</Text>
+            </View>
+          ))}
+        </View>
+      </Panel>
 
       <SegmentedTabs
         tabs={[{ key: 'standings', label: 'Standings' }, { key: 'recaps', label: 'Episode Recaps' }]}
@@ -230,30 +218,14 @@ export default function StandingsScreen({ navigation }: Props) {
 const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: 20, paddingTop: CONTENT_TOP_GAP, paddingBottom: 40, gap: 10 },
-  countdownCard: {
-    borderRadius: 16, overflow: 'hidden',
-    borderWidth: 1, borderColor: colors.line,
-  },
-  countdownBg: { paddingVertical: 14, paddingHorizontal: 18, gap: 10 },
+  countdownCard: { gap: 10, backgroundColor: colors.panel2 },
   countdownHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  countdownLabel: {
-    color: 'rgba(255,255,255,0.85)', fontSize: 11, letterSpacing: 1.6, fontWeight: '800',
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4,
-  },
-  countdownMeta: {
-    color: 'rgba(255,255,255,0.75)', fontSize: 11, fontWeight: '600',
-    textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 4,
-  },
+  countdownLabel: { color: colors.textDim, fontSize: 11, letterSpacing: 1.6, fontWeight: '800' },
+  countdownMeta: { color: colors.textDim, fontSize: 11, fontWeight: '600' },
   countdownUnits: { flexDirection: 'row', justifyContent: 'space-between' },
   countdownUnit: { alignItems: 'center', flex: 1 },
-  countdownNum: {
-    color: colors.accentOnDark, fontSize: 28, fontWeight: '800',
-    fontVariant: ['tabular-nums'],
-    textShadowColor: 'rgba(0,0,0,0.35)', textShadowRadius: 6,
-  },
-  countdownUnitLabel: {
-    color: 'rgba(255,255,255,0.7)', fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2, marginTop: -2,
-  },
+  countdownNum: { color: colors.accent, fontSize: 28, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  countdownUnitLabel: { color: colors.textDim, fontSize: 9.5, fontWeight: '800', letterSpacing: 1.2, marginTop: -2 },
   draftCard: { backgroundColor: colors.panel2, borderColor: colors.accent },
   draftTitle: { color: colors.accent, fontSize: 16, fontWeight: '800' },
   draftBody: { color: colors.textDim, fontSize: 13, marginTop: 2 },
