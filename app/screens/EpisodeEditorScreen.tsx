@@ -48,7 +48,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   const notes = useEpisodeNotes();
   const savedRecap = notes[String(episode)] ?? '';
 
-  const { root } = useLeague();
+  const { root, terms } = useLeague();
   const initialParts = recapParts(root, episode);
   const [recap, setRecap] = useState(initialParts.body);
   const [title, setTitle] = useState(initialParts.title ?? '');
@@ -459,8 +459,8 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
         </Panel>
 
         <Panel style={styles.section}>
-          <Text style={styles.sectionLabel}>VOTED OUT</Text>
-          <Text style={styles.hint}>Check everyone who left this episode.</Text>
+          <Text style={styles.sectionLabel}>{terms.out.toUpperCase()}</Text>
+          <Text style={styles.hint}>Check every {terms.unit} who left this episode.</Text>
           {eligible.map((c) => {
             const checked = out.includes(c.id);
             const isQuit = quit.includes(c.id);
@@ -477,7 +477,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
                     <View style={[styles.checkbox, styles.checkboxSmall, isQuit && styles.checkboxOn]}>
                       {isQuit && <Text style={styles.checkmark}>✓</Text>}
                     </View>
-                    <Text style={styles.quitLabel}>Left by quitting or medical evacuation (not voted out)</Text>
+                    <Text style={styles.quitLabel}>Left by quitting or medical evacuation (not {terms.out})</Text>
                   </Pressable>
                 )}
               </View>
@@ -486,7 +486,11 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
         </Panel>
 
         {/* Every episode has a vote and an immunity result, so those come
-            first; the things that only sometimes happen sit below. */}
+            first; the things that only sometimes happen sit below. Votes,
+            immunity, reward, idols, journeys and the merge are all Survivor
+            concepts — shows without them (e.g. Amazing Race teams) skip this
+            whole block. */}
+        {terms.hasStats && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>THE VOTE</Text>
           <Text style={styles.hint}>
@@ -515,14 +519,18 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             />
           )}
         </Panel>
+        )}
 
+        {terms.hasStats && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>IMMUNITY</Text>
           {tribes.length > 0 && <QuickTribeRow label="Tribe won" field="immunity" />}
           <Text style={styles.expandLabel}>Or individual winner (after the merge)</Text>
           <CastChips cast={alive} selected={idsWhere((st) => !!st.immunity)} onToggle={(id) => toggleField(id, 'immunity')} />
         </Panel>
+        )}
 
+        {terms.hasStats && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>REWARD</Text>
           <Text style={styles.hint}>Leave empty if there wasn't one.</Text>
@@ -530,9 +538,13 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
           <Text style={styles.expandLabel}>Or individual winners</Text>
           <CastChips cast={alive} selected={idsWhere((st) => !!st.reward)} onToggle={(id) => toggleField(id, 'reward')} />
         </Panel>
+        )}
 
+        {(terms.hasIdols || terms.hasStats || terms.hasTribes) && (
         <Text style={styles.groupLabel}>ONLY IF IT HAPPENED</Text>
+        )}
 
+        {terms.hasIdols && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>IDOLS</Text>
           <Text style={styles.expandLabel}>Found one</Text>
@@ -551,7 +563,9 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             </View>
           ))}
         </Panel>
+        )}
 
+        {terms.hasIdols && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>HOLDING NOW</Text>
           <Text style={styles.hint}>What people are sitting on after this episode. Tap one to remove it once it's played or lost.</Text>
@@ -580,12 +594,16 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             <CastChips cast={alive} selected={new Set()} onToggle={(id) => { addHolding(id, giveKind); setGiveKind(null); }} />
           )}
         </Panel>
+        )}
 
+        {terms.hasStats && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>JOURNEY</Text>
           <CastChips cast={alive} selected={idsWhere((st) => !!st.journey)} onToggle={(id) => toggleField(id, 'journey')} />
         </Panel>
+        )}
 
+        {terms.hasTribes && (
         <Panel style={styles.section}>
           <Text style={styles.sectionLabel}>MERGE</Text>
           <Text style={styles.hint}>Tick it on the merge episode. Tribe names drop off everyone's cards from then on.</Text>
@@ -596,6 +614,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             <Text style={styles.checkLabel}>The tribes merged this episode</Text>
           </Pressable>
         </Panel>
+        )}
 
         <Pressable style={styles.notifyRow} onPress={() => setNotify((v) => !v)}>
           <View style={[styles.checkbox, notify && styles.checkboxOn]}>
