@@ -61,6 +61,21 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
    (15 iOS builds/month, ~3 left in September): ask before any `eas build`.
 7. Then OTA fixes only: `eas update --channel <channel> --environment preview`.
 
+## Decisions 2026-09-25 (later in the day)
+- Deferred until the app has proven itself across multiple shows: final
+  name, a real domain (realitycheck.web.app is reserved by another Firebase
+  project), a working web version of the app, and App Store / Play Store
+  publishing. Until then: iOS via TestFlight, Android via the APK page.
+- Builds run from Matt's Mac (first iOS build needs his Apple 2FA login).
+  app.json `slug` stays `tribe-league` — it must match the EAS project.
+- `site/android/` is built but not deployed: set `APK_URL` to the EAS .apk
+  link, then `firebase deploy --only hosting`.
+- Google sign-in can't work in Expo Go (it sends an exp:// redirect Google
+  rejects); test with email until the real build.
+- Database rules for castPhotos/puzzleImage are committed but not deployed
+  (this container can't reach the RTDB endpoint): run
+  `firebase deploy --only database --project tribe-league-app` from the Mac.
+
 ## What only Matt (or his Mac) can do
 - Firebase deploys: done from here now — `FIREBASE_TOKEN` is in this
   environment and confirmed working (`firebase functions:list` shows all 7
