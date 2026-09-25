@@ -22,7 +22,7 @@ type Step =
   | { s: 'invite'; league: CreatedInfo };
 
 export default function OnboardingFlow({
-  user, profile, myLeagues, leaguesLoading, isAdmin, onOpenLeague,
+  user, profile, myLeagues, leaguesLoading, isAdmin, onOpenLeague, onLeagueCreated,
 }: {
   user: User | null;
   profile: Profile | null;
@@ -30,6 +30,9 @@ export default function OnboardingFlow({
   leaguesLoading: boolean;
   isAdmin: boolean;
   onOpenLeague: (l: MyLeague) => void;
+  // Fires once, right as a freshly-created league is about to open, so the
+  // app can land it on the cast-photos setup step instead of Standings.
+  onLeagueCreated?: (leagueKey: string) => void;
 }) {
   const [step, setStep] = useState<Step>({ s: 'welcome' });
 
@@ -87,6 +90,7 @@ export default function OnboardingFlow({
           league={step.league}
           onDone={() => {
             setStep({ s: 'home' });
+            onLeagueCreated?.(step.league.leagueKey);
             onOpenLeague({ seasonId: step.league.seasonId, leagueKey: step.league.leagueKey, name: step.league.name, personId: step.league.personId });
           }}
         />

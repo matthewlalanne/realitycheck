@@ -24,6 +24,9 @@ export type RootStackParamList = {
   // A player's own page: roster status, rank/points, prediction record.
   // Pushed from Standings, chat, and the Predictions leaderboard.
   TeamProfile: { playerId: string };
+  // Upload every cast photo in one pass. `setup` shows the skip/done setup
+  // framing (App.tsx, right after creating a league) instead of a plain back.
+  CastPhotos: { setup?: boolean } | undefined;
 };
 
 export type MainTabParamList = {

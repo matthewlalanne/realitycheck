@@ -196,6 +196,10 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('Draft')}
           />
           <SettingsAction
+            label="Add cast photos"
+            onPress={() => navigation.navigate('CastPhotos', { setup: false })}
+          />
+          <SettingsAction
             label={`Delete all ${league.name} chat messages`}
             destructive
             onPress={() =>

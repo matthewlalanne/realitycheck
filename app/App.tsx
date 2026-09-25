@@ -17,6 +17,7 @@ import EpisodeEditorScreen from './screens/EpisodeEditorScreen';
 import TribesScreen from './screens/TribesScreen';
 import EpisodeRecapScreen from './screens/EpisodeRecapScreen';
 import TeamProfileScreen from './screens/TeamProfileScreen';
+import CastPhotosScreen from './screens/CastPhotosScreen';
 import OnboardingFlow from './screens/onboarding/OnboardingFlow';
 import { useLastLeague } from './lib/lastLeague';
 import { useLeagueRoot } from './lib/state';
@@ -54,6 +55,11 @@ function RootNavigator() {
   // The league currently open (null = the "your leagues" list). Held here so
   // the season's data is only read once someone actually opens one.
   const [open, setOpen] = useState<MyLeague | null>(null);
+  // Set once, right when a league is freshly created, so its first open lands
+  // on the cast-photos setup step instead of Standings. Any other open of any
+  // league (including this same one, the second time) goes straight to
+  // MainTabs as normal.
+  const [justCreatedKey, setJustCreatedKey] = useState<string | null>(null);
   const { loading: lastLoading, lastLeagueFor, saveLastLeague } = useLastLeague();
   // Take any waiting update now rather than leaving it for the next launch.
   useAutoUpdate();
@@ -91,6 +97,7 @@ function RootNavigator() {
         leaguesLoading={leaguesLoading}
         isAdmin={isAdmin}
         onOpenLeague={(l) => { setOpen(l); if (uid) saveLastLeague(uid, l.leagueKey); }}
+        onLeagueCreated={(leagueKey) => setJustCreatedKey(leagueKey)}
       />
     );
   }
@@ -115,8 +122,12 @@ function RootNavigator() {
       onExitLeague={() => setOpen(null)}
       onLogOut={() => { setOpen(null); logOut(); }}
     >
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{ headerShown: false }}
+        initialRouteName={open.leagueKey === justCreatedKey ? 'CastPhotos' : 'MainTabs'}
+      >
         <Stack.Screen name="MainTabs" component={MainTabs} />
+        <Stack.Screen name="CastPhotos" component={CastPhotosScreen} initialParams={{ setup: true }} />
         <Stack.Screen name="Draft" component={DraftScreen} />
         <Stack.Screen name="Bio" component={BioScreen} />
         <Stack.Screen name="MyBoard" component={MyBoardScreen} />
