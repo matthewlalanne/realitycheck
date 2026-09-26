@@ -25,7 +25,7 @@ export type SeasonMeta = {
   features?: { tribes?: boolean; idols?: boolean; stats?: boolean; recaps?: boolean };
 };
 
-let activeId = 'survivor-51';
+let activeId = 'amazing-race-39';
 let activeMeta: SeasonMeta | null = null;
 
 export function setActiveSeason(id: string, meta: SeasonMeta | null) {

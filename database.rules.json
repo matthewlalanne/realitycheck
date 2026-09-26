@@ -136,6 +136,15 @@
             },
             "puzzleImage": {
               ".validate": "newData.isString() && newData.val().beginsWith('data:image/') && newData.val().length < 200000"
+            },
+            "castBios": {
+              // Commissioner-written bios (app/lib/castBios.ts). Caps match LIMITS.
+              "$contestantId": {
+                "hometown": { ".validate": "newData.isString() && newData.val().length <= 100" },
+                "occupation": { ".validate": "newData.isString() && newData.val().length <= 100" },
+                "about": { ".validate": "newData.isString() && newData.val().length <= 2000" },
+                "$other": { ".validate": false }
+              }
             }
           }
         },

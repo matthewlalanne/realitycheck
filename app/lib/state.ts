@@ -65,10 +65,13 @@ export type LeagueRecord = {
   draftMode?: 'live' | 'auto' | 'offline';
   /** Castaway photos this league uploaded (castaway id -> image URL). Only this league sees them. */
   castPhotos?: Record<string, string>;
+  /** Bios this league's commissioners wrote (contestant id -> bio). Only this league sees them. */
+  castBios?: Record<string, CastBio>;
   /** This league's own picture for the puzzle game. Falls back to the default art when unset. */
   puzzleImage?: string;
   picks?: Record<string, string[] | string>;
 };
+export type CastBio = { hometown?: string; occupation?: string; about?: string };
 export type RemoteContestant = {
   id: string; name: string; age?: number; from?: string; detail?: string; eliminatedWeek?: number | null; tribe?: string | null;
   /** How they left, only meaningful once eliminatedWeek is set. Defaults to 'voted' if absent. */

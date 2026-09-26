@@ -31,8 +31,8 @@ export default function CastPhotosScreen({ navigation, route }: Props) {
 
   return (
     <Screen
-      title="Add cast photos"
-      subtitle={`Until you add photos, ${terms.units} show as initials. Tap anyone to add theirs.`}
+      title="Cast photos & bios"
+      subtitle={`Until you add photos, ${terms.units} show as initials. Tap anyone to add theirs, or Bio to write one.`}
       onBack={setup ? undefined : () => navigation.goBack()}
       primary={{ label: 'Done', onPress: finish }}
       secondary={setup ? { label: 'Skip for now', onPress: finish } : undefined}
@@ -47,6 +47,10 @@ export default function CastPhotosScreen({ navigation, route }: Props) {
             ) : (
               <Text style={styles.action}>{league.castPhotos?.[c.id] ? 'Change' : 'Add'}</Text>
             )}
+            {/* Bios are written on the bio page itself (commissioners get an Edit bio button there). */}
+            <Pressable onPress={() => navigation.navigate('Bio', { id: c.id })} hitSlop={8}>
+              <Text style={styles.action}>{league.castBios?.[c.id] ? 'Bio ✓' : 'Bio'}</Text>
+            </Pressable>
           </Pressable>
         ))}
       </View>

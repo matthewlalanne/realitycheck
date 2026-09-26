@@ -21,6 +21,8 @@ export const LIMITS = {
   gifUrl: 500,         // league/messages/$lg/$id/gif/{url,preview}
   tribeName: 30,       // league/tribes/$id/name
   episodeTitle: 80,    // league/episodeTitles/$week
+  bioLine: 100,        // seasons/$s/leagues/$lg/castBios/$id/{hometown,occupation}
+  bioAbout: 2000,      // seasons/$s/leagues/$lg/castBios/$id/about
 } as const;
 
 // Trim to the cap without splitting a surrogate pair, which would leave a lone

@@ -9,6 +9,8 @@ import type { ColorScheme } from '../theme';
 import Panel from '../components/Panel';
 import BackButton from '../components/BackButton';
 import NoteEditor from '../components/NoteEditor';
+import BioEditor from '../components/BioEditor';
+import { saveCastBio } from '../lib/castBios';
 import { useLeague } from '../contexts/LeagueContext';
 import { useLiveContestants } from '../lib/episodes';
 import CastAvatar from '../components/CastAvatar';
@@ -32,7 +34,7 @@ export default function BioScreen({ route, navigation }: Props) {
   const bio = bios[route.params.id];
   // Reading the bio is exactly when you change your mind about someone, so the
   // note box and the move buttons are right here rather than a screen away.
-  const { root, league, leagueKey, playerId, teamId, terms } = useLeague();
+  const { root, league, leagueKey, playerId, teamId, terms, isCommissioner } = useLeague();
   const outEp = root.contestants?.find((c) => c?.id === route.params.id)?.eliminatedWeek ?? null;
   // Who drafted them in the league you're viewing (a couple shares one entry).
   const owners = ownersOf(league, route.params.id);
@@ -46,10 +48,15 @@ export default function BioScreen({ route, navigation }: Props) {
       : `${ownerNames}'S PICK`;
   const { board, move, setNote } = useMyBoard(leagueKey, playerId);
   const [editing, setEditing] = useState(false);
+  const [editingBio, setEditingBio] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   if (!contestant) return null;
 
   const hasPhoto = !!league.castPhotos?.[contestant.id];
+  // This league's own bio (commissioner-written) wins over the bundled facts.
+  const leagueBio = league.castBios?.[contestant.id] ?? {};
+  const hometown = leagueBio.hometown || bio?.hometown || contestant.from || '';
+  const occupation = leagueBio.occupation || bio?.occupation;
   const changePhoto = async () => {
     setUploadingPhoto(true);
     try { await pickAndStoreCastPhoto(leagueKey, contestant.id); } finally { setUploadingPhoto(false); }
@@ -212,10 +219,23 @@ export default function BioScreen({ route, navigation }: Props) {
         <Panel style={styles.metaPanel}>
           {contestant.detail && <MetaRow label="Team" value={contestant.detail} />}
           {!!contestant.age && <MetaRow label="Age" value={String(contestant.age)} />}
-          <MetaRow label="Hometown" value={bio?.hometown ?? contestant.from ?? ''} />
+          <MetaRow label="Hometown" value={hometown} />
           {bio && <MetaRow label="Current residence" value={bio.residence} />}
-          {bio && <MetaRow label="Occupation" value={bio.occupation} />}
+          {!!occupation && <MetaRow label="Occupation" value={occupation} />}
         </Panel>
+
+        {!!leagueBio.about && (
+          <Panel style={styles.qaPanel}>
+            <Text style={styles.question}>About</Text>
+            <Text style={styles.answer}>{leagueBio.about}</Text>
+          </Panel>
+        )}
+        {isCommissioner && (
+          <Pressable style={styles.officialLink} onPress={() => setEditingBio(true)}>
+            <Ionicons name="create-outline" size={16} color={colors.accent} />
+            <Text style={styles.officialLinkText}>{leagueBio.about || leagueBio.hometown || leagueBio.occupation ? 'Edit bio' : 'Write a bio'}</Text>
+          </Pressable>
+        )}
 
         {/* Their own official video/page, not our writeup — CBS's YouTube
             player embedded as-is, and a link out to their bio rather than
@@ -238,6 +258,14 @@ export default function BioScreen({ route, navigation }: Props) {
 
       </ScrollView>
 
+      <BioEditor
+        visible={editingBio}
+        contestantId={contestant.id}
+        name={contestant.name}
+        initial={{ hometown: leagueBio.hometown ?? hometown, occupation: leagueBio.occupation ?? occupation, about: leagueBio.about }}
+        onSave={(b) => saveCastBio(leagueKey, contestant.id, b).catch(() => {})}
+        onClose={() => setEditingBio(false)}
+      />
       <NoteEditor
         visible={editing}
         contestantId={contestant.id}

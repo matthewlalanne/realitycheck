@@ -97,6 +97,17 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 - Real sign-in testing (his ISP's certificate filter breaks Google sign-in in
   the simulator; use a hotspot or a real iPhone).
 
+## 2026-09-26
+- Denver / Survivor 51 removed from Reality Check (played in Outlast only).
+  Code side done; DB side is `scripts/remove-denver.sh` (run from the Mac,
+  backs up to ~/realitycheck-denver-backup first).
+- Commissioner-written bios: `seasons/<s>/leagues/<lg>/castBios/<id>`
+  {hometown, occupation, about}; Edit bio on the Bio screen, rules deployed.
+  The Boring Stroll (lgmuhnd33efkfd) has all 13 AR39 bios loaded.
+- Cast photos for one league from a folder: `scripts/league-cast-photos.sh`.
+- APK profile now builds on the `production` channel so Android and iOS get
+  the same OTA. Old APKs (android-apk channel) never get updates: reinstall.
+
 ## Rules
 - Keep replies short; tables over prose. Never state Survivor results.
 - Matt wants to stay on free tiers.

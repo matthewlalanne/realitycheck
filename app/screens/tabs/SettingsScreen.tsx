@@ -194,7 +194,7 @@ export default function SettingsScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('Draft')}
           />
           <SettingsAction
-            label="Add cast photos"
+            label="Cast photos & bios"
             onPress={() => navigation.navigate('CastPhotos', { setup: false })}
           />
           <SettingsAction
@@ -217,7 +217,7 @@ export default function SettingsScreen({ navigation }: Props) {
       {isAdmin && (
         <Panel style={[styles.section, styles.commissionerPanel]}>
           <Text style={styles.sectionTitle}>Show admin</Text>
-          <Text style={styles.commissionerHint}>Results you enter here update every league on this season.</Text>
+          <Text style={styles.commissionerHint}>Only app admins see this, in every league. Results you enter here update every league on this season.</Text>
           <SettingsAction label="Manage episodes & eliminations" onPress={() => navigation.navigate('EpisodeManager')} />
           {terms.hasTribes && <SettingsAction label="Tribe names & colors" onPress={() => navigation.navigate('Tribes')} />}
         </Panel>
