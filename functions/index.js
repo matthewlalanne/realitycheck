@@ -272,14 +272,18 @@ exports.joinLeague = onCall({ region: REGION }, async (request) => {
   }
   const playerName = cleanName(d.playerName);
   const res = await lgRef.transaction((cur) => {
-    if (!cur) return; // abort
+    // The first pass often runs before the league is fetched, with cur ===
+    // null. Returning undefined there aborted every join into a non-claimable
+    // league ("Couldn't join right now"); returning null instead lets the SDK
+    // retry with the real data (and is a no-op if the league is truly gone).
+    if (!cur) return null;
     cur.players = cur.players || [];
     if (!cur.players.some((p) => p.id === uid)) cur.players.push({ id: uid, name: playerName });
     cur.memberIds = cur.memberIds || {};
     cur.memberIds[uid] = uid;
     return cur;
   });
-  if (!res.committed) throw new HttpsError("aborted", "Couldn't join right now. Try again.");
+  if (!res.committed || !res.snapshot.exists()) throw new HttpsError("aborted", "Couldn't join right now. Try again.");
   return finish(uid);
 });
 
