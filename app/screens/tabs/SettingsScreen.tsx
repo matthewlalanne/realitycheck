@@ -16,6 +16,8 @@ import { PinnedHeader, CONTENT_TOP_GAP } from '../../components/ScreenHeader';
 import { useLeague } from '../../contexts/LeagueContext';
 import { signOutOfLeague } from '../../lib/leagueAuth';
 import { clearMessages, draftDone, renamePersonIn } from '../../lib/state';
+import { saveProfileName } from '../../lib/account';
+import { auth } from '../../lib/firebase';
 import { CopyableCode } from '../onboarding/LeagueScreens';
 import Avatar from '../../components/Avatar';
 import { avatarFor, pickAndStoreAvatar, setAvatar, useAvatars } from '../../lib/avatars';
@@ -287,7 +289,10 @@ export default function SettingsScreen({ navigation }: Props) {
                 onPress={async () => {
                   setNameSaving(true);
                   try {
+                    // This league's roster (what everyone here sees) and the
+                    // account name new leagues start from.
                     await renamePersonIn(leagueKey, league, playerId, nameDraft);
+                    if (auth.currentUser) await saveProfileName(auth.currentUser.uid, nameDraft);
                     setEditingName(false);
                   } catch {
                     Alert.alert("Couldn't save your name", 'Check your connection and try again.');

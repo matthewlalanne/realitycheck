@@ -68,6 +68,11 @@ export function saveProfile(uid: string, p: Profile) {
   return update(ref(rtdb, `users/${uid}`), { name: p.name.trim().slice(0, 40), photo: p.photo ?? null });
 }
 
+/** Just the name — saveProfile would also reset the stored photo. */
+export function saveProfileName(uid: string, name: string) {
+  return update(ref(rtdb, `users/${uid}`), { name: name.trim().slice(0, 40) });
+}
+
 // ---- Seasons a league can be built on ----------------------------------------
 
 export type SeasonOption = { id: string; showId: string; showName: string; label: string; open: boolean; castCount: number };
