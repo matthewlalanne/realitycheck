@@ -58,7 +58,6 @@ exports.requestEmailCode = onCall(
     }
 
     const code = sixDigitCode();
-    await ref.set({ email, code, sentAt: Date.now(), expiresAt: Date.now() + CODE_TTL_MS, attempts: 0 });
 
     const mailer = nodemailer.createTransport({
       service: "gmail",
@@ -76,6 +75,9 @@ exports.requestEmailCode = onCall(
       throw new HttpsError("internal", "Couldn't send the code. Try again in a moment.");
     }
 
+    // Saved only after the email actually went out, so a failed send doesn't
+    // start the one-minute cooldown (which showed up as a 429 on the retry).
+    await ref.set({ email, code, sentAt: Date.now(), expiresAt: Date.now() + CODE_TTL_MS, attempts: 0 });
     return { ok: true };
   },
 );
