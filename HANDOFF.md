@@ -105,8 +105,11 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
   {hometown, occupation, about}; Edit bio on the Bio screen, rules deployed.
   The Boring Stroll (lgmuhnd33efkfd) has all 13 AR39 bios loaded.
 - Cast photos for one league from a folder: `scripts/league-cast-photos.sh`.
-- APK profile now builds on the `production` channel so Android and iOS get
-  the same OTA. Old APKs (android-apk channel) never get updates: reinstall.
+- The `android-apk` channel now points at the `production` branch (changed on
+  EAS, not in eas.json: eas.json is part of the fingerprint, so editing it
+  strands every installed build). One `eas update --channel production`
+  reaches iOS and Android. APKs built before 2026-09-26 are on an older
+  runtime and never update: reinstall from the download page.
 
 ## Rules
 - Keep replies short; tables over prose. Never state Survivor results.
