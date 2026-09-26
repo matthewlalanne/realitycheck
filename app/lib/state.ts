@@ -160,6 +160,30 @@ export function personNameIn(lg: LeagueRecord | undefined, personId: string): st
 }
 
 /**
+ * Commissioner tool: adds a roster slot for someone who isn't drafting from
+ * their own account — no phone number, no interest in the app, whatever the
+ * reason. They show up in the draft order and standings under this name like
+ * anyone else; renamePersonIn can fix the name later, same as anyone else's.
+ * Whoever's running their draft picks for them from that seat.
+ */
+export function addLeaguePlayer(lgKey: string, name: string): Promise<void> {
+  const trimmed = clamp(name.trim(), LIMITS.personName);
+  if (!trimmed) return Promise.resolve();
+  const playersRef = ref(rtdb, `${root_()}/leagues/${lgKey}/players`);
+  return runTransaction(playersRef, (players: Player[] | null) => {
+    const list = players || [];
+    let id = `manual_${Math.random().toString(36).slice(2, 10)}`;
+    while (list.some((p) => p.id === id)) id = `manual_${Math.random().toString(36).slice(2, 10)}`;
+    return [...list, { id, name: trimmed }];
+  }).then(() => undefined);
+}
+
+/** Commissioner tool: moves the draft (or auto-draft) time. Pass null to clear it. */
+export function setDraftTime(lgKey: string, iso: string | null): Promise<void> {
+  return update(ref(rtdb, root_()), { [`leagues/${lgKey}/draftAt`]: iso });
+}
+
+/**
  * Renames a person's own display name within this league — the solo roster
  * entry, or their slot on a shared one. Everyone sees this everywhere
  * (Standings, chat, predictions) since they all read the name from here, not

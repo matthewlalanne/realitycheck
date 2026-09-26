@@ -88,6 +88,11 @@
             "picksPerPlayer": {
               ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30"
             },
+            "draftAt": {
+              // ISO date string, or null to leave it unscheduled. Commissioner tool
+              // (app/lib/state.ts setDraftTime).
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
             "players": {
               ".validate": "newData.hasChildren()",
               "$i": {

@@ -16,6 +16,8 @@ import { PinnedHeader, CONTENT_TOP_GAP } from '../../components/ScreenHeader';
 import { useLeague } from '../../contexts/LeagueContext';
 import { signOutOfLeague } from '../../lib/leagueAuth';
 import { clearMessages, draftDone, renamePersonIn } from '../../lib/state';
+import PlayersEditor from '../../components/PlayersEditor';
+import DraftTimeEditor from '../../components/DraftTimeEditor';
 import { saveProfileName } from '../../lib/account';
 import { auth } from '../../lib/firebase';
 import { CopyableCode } from '../onboarding/LeagueScreens';
@@ -35,6 +37,8 @@ type Props = CompositeScreenProps<
 
 export default function SettingsScreen({ navigation }: Props) {
   const colors = useThemeColors();
+  const [editingPlayers, setEditingPlayers] = useState(false);
+  const [editingDraftTime, setEditingDraftTime] = useState(false);
   const styles = makeStyles(colors);
   // Tapping the tab you're already on jumps back to the top, the way
   // every other iOS app behaves.
@@ -197,6 +201,8 @@ export default function SettingsScreen({ navigation }: Props) {
             label="Cast photos & bios"
             onPress={() => navigation.navigate('CastPhotos', { setup: false })}
           />
+          <SettingsAction label="Players" onPress={() => setEditingPlayers(true)} />
+          {!draftDone(league) && <SettingsAction label="Draft time" onPress={() => setEditingDraftTime(true)} />}
           <SettingsAction
             label={`Delete all ${league.name} chat messages`}
             destructive
@@ -264,6 +270,19 @@ export default function SettingsScreen({ navigation }: Props) {
 
 
       </ScrollView>
+
+      <PlayersEditor
+        visible={editingPlayers}
+        leagueKey={leagueKey}
+        league={league}
+        onClose={() => setEditingPlayers(false)}
+      />
+      <DraftTimeEditor
+        visible={editingDraftTime}
+        leagueKey={leagueKey}
+        initial={league.draftAt ?? null}
+        onClose={() => setEditingDraftTime(false)}
+      />
 
       <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}>
         <View style={styles.nameBackdrop}>
