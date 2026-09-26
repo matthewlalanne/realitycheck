@@ -120,6 +120,8 @@ function RootNavigator() {
       root={root}
       identity={identity}
       isAdmin={isAdmin}
+      allLeagues={myLeagues}
+      onSwitchLeague={(l) => { setOpen(l); if (uid) saveLastLeague(uid, l.leagueKey); }}
       onExitLeague={() => setOpen(null)}
       onLogOut={() => { setOpen(null); logOut(); }}
     >

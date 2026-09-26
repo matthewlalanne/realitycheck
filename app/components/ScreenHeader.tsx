@@ -39,7 +39,7 @@ export default function ScreenHeader({
   const styles = makeStyles(colors);
   const inset = useTopInset();
   const top = topInset ? inset : 0;
-  const { root, leagueKey, myLeagueKeys, canSwitchLeagues, setLeagueKey, onExitLeague } = useLeague();
+  const { root, leagueKey, allLeagues, onSwitchLeague, onExitLeague } = useLeague();
   const [open, setOpen] = useState(false);
 
   const currentName = root.leagues[leagueKey]?.name ?? leagueKey;
@@ -48,7 +48,7 @@ export default function ScreenHeader({
     <View style={[styles.wrap, { paddingTop: top }]}>
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        {(canSwitchLeagues || !!onExitLeague) && (
+        {(allLeagues.length > 1 || !!onExitLeague) && (
           <Pressable
             style={styles.trigger}
             onPress={() => setOpen(true)}
@@ -72,18 +72,19 @@ export default function ScreenHeader({
           {/* Anchored to the trigger's real screen position, which is the
               safe-area inset regardless of whether this header adds it. */}
           <View style={[styles.menu, { top: inset + 42 }]}>
-            {myLeagueKeys.map((k) => {
+            {allLeagues.map((l) => {
+              const k = l.leagueKey;
               const on = k === leagueKey;
               return (
                 <Pressable
                   key={k}
                   style={[styles.item, on && styles.itemOn]}
-                  onPress={() => { setLeagueKey(k); setOpen(false); }}
+                  onPress={() => { setOpen(false); if (!on) onSwitchLeague?.(l); }}
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
                 >
                   <Text style={[styles.itemText, on && styles.itemTextOn, { flexShrink: 1 }]} numberOfLines={1}>
-                    {root.leagues[k]?.name ?? k}
+                    {(on ? root.leagues[k]?.name : null) ?? l.name ?? k}
                   </Text>
                   {on && <Ionicons name="checkmark" size={16} color={colors.accent} />}
                 </Pressable>

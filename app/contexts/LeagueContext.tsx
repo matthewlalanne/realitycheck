@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import type { Identity } from '../lib/identity';
+import type { MyLeague } from '../lib/account';
 import { useRegisterPushToken } from '../lib/push';
 import { personNameIn, teamIdFor, type LeagueRecord, type LeagueRoot } from '../lib/state';
 import { termsFor, type Terms } from '../lib/season';
@@ -26,6 +27,11 @@ type LeagueContextValue = {
   isAdmin: boolean;
   /** Show-specific wording and feature switches (castaway vs team, tribes, idols). */
   terms: Terms;
+  /** Every league on this account, across all shows — what the header's
+   *  "Switch league" menu lists. */
+  allLeagues: MyLeague[];
+  /** Opens another of your leagues (it may be a different show/season). */
+  onSwitchLeague?: (l: MyLeague) => void;
   /** Back to the list of all your leagues (create / join lives there). */
   onExitLeague?: () => void;
   /** Log out of the account entirely. */
@@ -48,6 +54,8 @@ export function LeagueProvider({
   initialLeagueKey,
   onLeagueChange,
   isAdmin,
+  allLeagues = [],
+  onSwitchLeague,
   onExitLeague,
   onLogOut,
   children,
@@ -58,6 +66,8 @@ export function LeagueProvider({
   initialLeagueKey?: string | null;
   onLeagueChange?: (key: string) => void;
   isAdmin: boolean;
+  allLeagues?: MyLeague[];
+  onSwitchLeague?: (l: MyLeague) => void;
   onExitLeague?: () => void;
   onLogOut?: () => void;
   children: React.ReactNode;
@@ -100,6 +110,8 @@ export function LeagueProvider({
         isCommissioner: !!league?.commissionerIds?.includes(identity.playerId),
         isAdmin,
         terms: termsFor(root.meta),
+        allLeagues,
+        onSwitchLeague,
         onExitLeague,
         onLogOut,
       }}
