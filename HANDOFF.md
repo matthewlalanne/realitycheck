@@ -83,6 +83,10 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
   import-from-outlast.sh was deleted: it wrote the pre-multi-show layout
   and would have replaced every Reality Check avatar.
 
+- Email codes are sent from Matt's Gmail (nodemailer + a Gmail app password
+  in the GMAIL_APP_PASSWORD secret). Resend was dropped: its free test sender
+  only delivers to the Resend account owner, so nobody else got codes.
+
 ## What only Matt (or his Mac) can do
 - Firebase deploys: done from here now — `FIREBASE_TOKEN` is in this
   environment and confirmed working (`firebase functions:list` shows all 7

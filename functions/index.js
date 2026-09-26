@@ -5,7 +5,7 @@ const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
 const { getDatabase } = require("firebase-admin/database");
 const { logger } = require("firebase-functions");
-const { Resend } = require("resend");
+const nodemailer = require("nodemailer");
 
 initializeApp();
 const REGION = "us-central1";
@@ -17,9 +17,13 @@ const REGION = "us-central1";
 // league password), so this is a proper login: a 6-digit code, emailed,
 // expiring, single-use, rate-limited. No password to store or leak.
 //
-// RESEND_API_KEY: from resend.com (free tier is plenty for this). Set with
-// `firebase functions:secrets:set RESEND_API_KEY --project tribe-league-app`.
-const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
+// Sent from Matt's Gmail over SMTP with a Gmail app password — free, no
+// domain needed, and delivers to anyone. (Resend's free test sender only
+// delivers to the Resend account owner until a domain is verified, so
+// nobody else ever got a code.) Set the password with
+// `firebase functions:secrets:set GMAIL_APP_PASSWORD --project tribe-league-app`.
+const GMAIL_USER = "lalanne.matthew@gmail.com";
+const GMAIL_APP_PASSWORD = defineSecret("GMAIL_APP_PASSWORD");
 
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes, matches the app's copy
 const CODE_COOLDOWN_MS = 60 * 1000; // one send per email per minute
@@ -41,7 +45,7 @@ function sixDigitCode() {
 }
 
 exports.requestEmailCode = onCall(
-  { region: REGION, secrets: [RESEND_API_KEY], enforceAppCheck: false },
+  { region: REGION, secrets: [GMAIL_APP_PASSWORD], enforceAppCheck: false },
   async (request) => {
     const email = normalizeEmail(request.data && request.data.email);
     if (!email) throw new HttpsError("invalid-argument", "Enter a valid email address.");
@@ -56,33 +60,18 @@ exports.requestEmailCode = onCall(
     const code = sixDigitCode();
     await ref.set({ email, code, sentAt: Date.now(), expiresAt: Date.now() + CODE_TTL_MS, attempts: 0 });
 
-    const resend = new Resend(RESEND_API_KEY.value());
+    const mailer = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD.value() },
+    });
     try {
-      // The v4 SDK does NOT throw for a rejected send — it resolves with
-      // { data, error }. A prior version of this function only had the
-      // try/catch below, which only ever fires for a network-level failure,
-      // so a Resend-side rejection (e.g. their shared test sender
-      // onboarding@resend.dev only delivering to the account's own address
-      // until a domain is verified) silently returned {ok:true} with no
-      // email ever sent.
-      const { error } = await resend.emails.send({
-        // Resend's shared test sender — works with zero DNS setup. Swap for a
-        // verified domain (see README "Auth setup") once one's set up; the old
-        // sign-in@playrealitycheck.app was never a real, verified domain (this
-        // project's only real domain is playrealitycheck.web.app, a Firebase
-        // Hosting subdomain that can't take Resend's DNS records anyway), so
-        // every send silently failed at Resend.
-        from: "Reality Check <onboarding@resend.dev>",
+      await mailer.sendMail({
+        from: `Reality Check <${GMAIL_USER}>`,
         to: email,
         subject: `${code} is your Reality Check code`,
         text: `Your sign-in code is ${code}. It expires in 10 minutes.\n\nDidn't request this? You can ignore it.`,
       });
-      if (error) {
-        logger.error("email send rejected", error);
-        throw new HttpsError("internal", "Couldn't send the code. Try again in a moment.");
-      }
     } catch (err) {
-      if (err instanceof HttpsError) throw err;
       logger.error("email send failed", err);
       throw new HttpsError("internal", "Couldn't send the code. Try again in a moment.");
     }
