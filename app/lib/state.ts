@@ -292,6 +292,10 @@ export function eliminatedInEpisode(root: LeagueRoot, ep: number) {
 export function shortName(full: string): string {
   const nick = full.match(/["\u201C\u2018']([^"\u201D\u2019']+)["\u201D\u2019']/);
   if (nick && nick[1].trim()) return nick[1].trim();
+  // A team's name is already both people's first names ("Zach & Nate") \u2014
+  // nothing to shorten, and taking the first word would drop the second
+  // person entirely. Only a solo castaway's "First Last" gets trimmed.
+  if (full.includes('&')) return full.trim();
   return full.trim().split(/\s+/)[0] || full;
 }
 
