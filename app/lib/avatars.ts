@@ -108,6 +108,24 @@ export async function setAvatar(playerId: string, dataUri: string | null) {
 }
 
 /**
+ * Squares up a local photo (from the picker, or onboarding's own picker step)
+ * and stores it as this person's avatar. Shared so a photo picked once never
+ * has to be re-picked just to reach a different screen's save button.
+ */
+export async function encodeAndStoreAvatar(playerId: string, localUri: string): Promise<boolean> {
+  // Resize before encoding: the picker only compresses, so a phone photo would
+  // otherwise arrive as a multi-megabyte string.
+  const shrunk = await manipulateAsync(
+    localUri,
+    [{ resize: { width: SIZE, height: SIZE } }],
+    { compress: QUALITY, format: SaveFormat.JPEG, base64: true },
+  );
+  if (!shrunk.base64) return false;
+  await setAvatar(playerId, `data:image/jpeg;base64,${shrunk.base64}`);
+  return true;
+}
+
+/**
  * Opens the photo library, squares up the result and stores it.
  * Returns false when the person cancels or declines access.
  */
@@ -123,15 +141,5 @@ export async function pickAndStoreAvatar(playerId: string): Promise<boolean> {
   });
   if (picked.canceled || !picked.assets?.length) return false;
 
-  // Resize before encoding: the picker only compresses, so a phone photo would
-  // otherwise arrive as a multi-megabyte string.
-  const shrunk = await manipulateAsync(
-    picked.assets[0].uri,
-    [{ resize: { width: SIZE, height: SIZE } }],
-    { compress: QUALITY, format: SaveFormat.JPEG, base64: true },
-  );
-  if (!shrunk.base64) return false;
-
-  await setAvatar(playerId, `data:image/jpeg;base64,${shrunk.base64}`);
-  return true;
+  return encodeAndStoreAvatar(playerId, picked.assets[0].uri);
 }

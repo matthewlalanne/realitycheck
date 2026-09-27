@@ -4,6 +4,7 @@ import { LandingScreen, WelcomeScreen, EmailScreen, CodeScreen, ProfileScreen } 
 import CreateLeagueWizard, { type CreatedInfo } from './CreateLeagueWizard';
 import { LeaguesHome, JoinScreen, InviteScreen } from './LeagueScreens';
 import { logOut, saveProfile, type MyLeague, type Profile } from '../../lib/account';
+import { encodeAndStoreAvatar, setAvatar } from '../../lib/avatars';
 import { usePendingInviteCode } from '../../lib/deepLink';
 
 // Everything before you're inside a league: sign in, set your name, then
@@ -76,7 +77,17 @@ export default function OnboardingFlow({
         initialName={user.displayName ?? undefined}
         initialPhoto={user.photoURL ?? undefined}
         onBack={() => { logOut(); }}
-        onDone={(name, photo) => { saveProfile(user.uid, { name, photo: photo && photo.startsWith('https://') ? photo : null }); }}
+        onDone={(name, photo) => {
+          saveProfile(user.uid, { name, photo: photo && photo.startsWith('https://') ? photo : null });
+          // The avatar everyone actually sees (Home, chat, standings) is keyed
+          // by player id, not the account profile above — without this, a
+          // Google photo (or one picked here) showed for a moment on this
+          // screen and then vanished everywhere else. New joins use the uid as
+          // their player id, so this is the right key for every league they
+          // join next, same as it is for the account itself.
+          if (photo?.startsWith('https://')) setAvatar(user.uid, photo).catch(() => {});
+          else if (photo) encodeAndStoreAvatar(user.uid, photo).catch(() => {});
+        }}
       />
     );
   }
