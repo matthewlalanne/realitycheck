@@ -8,7 +8,10 @@ import { useDraftRoot } from '../lib/state';
 import CastAvatar from '../components/CastAvatar';
 import type { ColorScheme } from '../theme';
 
-const alertSound = require('../assets/sounds/survivor_alert.mp3');
+const survivorAlertSound = require('../assets/sounds/survivor_alert.mp3');
+// A plain synthesized two-note chime for every show that isn't Survivor —
+// generic on purpose, not tied to any network's IP.
+const genericAlertSound = require('../assets/sounds/pick_alert.wav');
 
 // How long the card stays up. The audio is paused with it so the sound never
 // outlives the thing it's announcing.
@@ -37,7 +40,9 @@ export default function DraftAnnouncement() {
     }) ?? leagueKey;
   const league = root?.leagues?.[draftKey];
   const sourceId = `${practice ? 'practice' : 'live'}:${draftKey}`;
-  const player = useAudioPlayer(alertSound);
+  const survivorPlayer = useAudioPlayer(survivorAlertSound);
+  const genericPlayer = useAudioPlayer(genericAlertSound);
+  const player = terms.isSurvivor ? survivorPlayer : genericPlayer;
 
   const [shown, setShown] = useState<Announcement | null>(null);
   const anim = useRef(new Animated.Value(0)).current;
@@ -67,15 +72,13 @@ export default function DraftAnnouncement() {
     const playerName = league.players.find((p) => p.id === last.playerId)?.name ?? last.playerId;
     setShown({ playerName, castName, castId: last.contestantId });
 
-    if (terms.isSurvivor) {
-      try {
-        player.seekTo(0);
-        player.play();
-      } catch {
-        // A missing audio route shouldn't take the announcement down with it.
-      }
+    try {
+      player.seekTo(0);
+      player.play();
+    } catch {
+      // A missing audio route shouldn't take the announcement down with it.
     }
-  }, [last?.at, last, root, league, player, sourceId, terms.isSurvivor]);
+  }, [last?.at, last, root, league, player, sourceId]);
 
   useEffect(() => {
     if (!shown) return;
