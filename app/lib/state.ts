@@ -183,6 +183,43 @@ export function setDraftTime(lgKey: string, iso: string | null): Promise<void> {
   return update(ref(rtdb, root_()), { [`leagues/${lgKey}/draftAt`]: iso });
 }
 
+/** Only safe before anyone's drafted — after that, a roster id is load-bearing. */
+export function canRemovePlayers(league: LeagueRecord | undefined): boolean {
+  if (!league) return false;
+  return !league.draftState?.started && Object.keys(league.picks ?? {}).length === 0;
+}
+
+/**
+ * Commissioner tool: drops a whole roster entry (a solo player, or a shared
+ * team and everyone on it) — someone who signed up and isn't playing, a
+ * duplicate, whatever the reason. Only allowed before the draft, since after
+ * that a roster id is load-bearing (picks, standings, chat history all point
+ * at it). If they'd signed in, their account also loses this league from
+ * their list, same as if they'd never joined.
+ */
+export function removeLeaguePlayer(lgKey: string, league: LeagueRecord, personId: string): Promise<void> {
+  if (!canRemovePlayers(league)) return Promise.reject(new Error('cannot-remove-after-draft'));
+  const entry = league.players.find((p) => p.id === personId);
+  if (!entry) return Promise.resolve();
+  const removedIds = new Set([entry.id, ...(entry.members ?? []).map((m) => m.id)]);
+  const remaining = league.players.filter((p) => p.id !== personId);
+  if (!remaining.length) return Promise.reject(new Error('cannot-remove-last-player'));
+
+  const patch: Record<string, unknown> = {
+    [`leagues/${lgKey}/players`]: remaining,
+  };
+  if (league.draftOrder?.length) {
+    patch[`leagues/${lgKey}/draftOrder`] = league.draftOrder.filter((id) => id !== personId);
+  }
+  if (league.pickOrder?.length) {
+    patch[`leagues/${lgKey}/pickOrder`] = league.pickOrder.filter((id) => id !== personId);
+  }
+  for (const [uid, mappedId] of Object.entries(league.memberIds ?? {})) {
+    if (removedIds.has(mappedId)) patch[`leagues/${lgKey}/memberIds/${uid}`] = null;
+  }
+  return update(ref(rtdb, root_()), patch);
+}
+
 /**
  * Renames a person's own display name within this league — the solo roster
  * entry, or their slot on a shared one. Everyone sees this everywhere

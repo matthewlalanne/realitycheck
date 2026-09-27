@@ -16,13 +16,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../contexts/ThemeContext';
 import type { ColorScheme } from '../theme';
 import { LIMITS, clamp } from '../lib/limits';
-import { addLeaguePlayer, peopleOf, renamePersonIn, type LeagueRecord } from '../lib/state';
+import { addLeaguePlayer, canRemovePlayers, removeLeaguePlayer, renamePersonIn, type LeagueRecord } from '../lib/state';
 
 // Commissioner tool: add someone who isn't drafting from their own account
 // (no phone, no interest in the app — whoever's running their draft picks
-// for them), and fix a typo'd or outdated name on anyone already in the
-// league. Renaming here is the same write as "Change your name" in
-// Settings, just aimed at someone else's roster slot.
+// for them), fix a typo'd or outdated name on anyone already in the league
+// (the same write as "Change your name" in Settings, just aimed at someone
+// else's roster slot), and drop someone who signed up and isn't playing.
+// Works on whole roster entries — a shared team comes and goes together.
 export default function PlayersEditor({
   visible,
   leagueKey,
@@ -42,7 +43,7 @@ export default function PlayersEditor({
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
 
-  const people = peopleOf(league);
+  const removable = canRemovePlayers(league);
 
   const submitAdd = async () => {
     const name = newName.trim();
@@ -73,6 +74,30 @@ export default function PlayersEditor({
     }
   };
 
+  const remove = (id: string, name: string) => {
+    Alert.alert(
+      `Remove ${name}?`,
+      "They come off the draft order and standings. If they'd signed in, this also drops the league from their account — same as if they'd never joined.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            setBusyId(id);
+            try {
+              await removeLeaguePlayer(leagueKey, league, id);
+            } catch {
+              Alert.alert("Couldn't remove them", 'Check your connection and try again.');
+            } finally {
+              setBusyId(null);
+            }
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <KeyboardAvoidingView style={styles.backdrop} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -88,7 +113,7 @@ export default function PlayersEditor({
           </View>
 
           <FlatList
-            data={people}
+            data={league.players}
             keyExtractor={(p) => p.id}
             style={styles.list}
             contentContainerStyle={{ gap: 8 }}
@@ -113,13 +138,25 @@ export default function PlayersEditor({
               ) : (
                 <View style={styles.row}>
                   <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
-                  <Pressable onPress={() => { setRenamingId(item.id); setRenameDraft(item.name); }} hitSlop={8}>
+                  <Pressable onPress={() => { setRenamingId(item.id); setRenameDraft(item.name); }} hitSlop={8} disabled={busyId === item.id}>
                     <Ionicons name="create-outline" size={18} color={colors.accent2} />
                   </Pressable>
+                  {removable && league.players.length > 1 && (
+                    busyId === item.id ? (
+                      <ActivityIndicator color={colors.red} size="small" />
+                    ) : (
+                      <Pressable onPress={() => remove(item.id, item.name)} hitSlop={8}>
+                        <Ionicons name="trash-outline" size={18} color={colors.red} />
+                      </Pressable>
+                    )
+                  )}
                 </View>
               )
             }
           />
+          {!removable && (
+            <Text style={styles.hint}>Players can be removed only before the draft starts.</Text>
+          )}
 
           {adding ? (
             <View style={styles.addRow}>
