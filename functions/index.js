@@ -1,5 +1,6 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onValueUpdated, onValueCreated } = require("firebase-functions/v2/database");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getAuth } = require("firebase-admin/auth");
@@ -365,5 +366,129 @@ exports.pruneExpiredCodes = onSchedule(
       if ((child.val().expiresAt || 0) < now) updates[child.key] = null;
     });
     if (Object.keys(updates).length) await db.ref("authCodes").update(updates);
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Push notifications
+//
+// Devices register their Expo push token client-side (app/lib/push.ts) under
+// pushTokens/<leagueKey>_<playerId> — one entry per league a phone has open,
+// keyed so a lookup for "this player, in this league" is a single get(), no
+// scanning. Sending goes straight to Expo's push service (no APNs/FCM keys
+// to manage ourselves); Expo relays to Apple/Google from there.
+//
+// Deliberately contentless (see push.ts's own comment): a title says what
+// kind of thing happened, never who said what or who's still in it.
+//
+// NOTE: per-person toggles (app/lib/notificationPrefs.ts) are stored on the
+// device only right now, not synced here — so these can't yet skip someone
+// who turned a category off. Every league member gets these two kinds until
+// prefs move server-side.
+async function sendExpoPush(messages) {
+  const list = messages.filter((m) => m && m.to);
+  if (!list.length) return;
+  // Expo's own limit is 100 messages per request; our leagues are nowhere
+  // close, but chunking costs nothing and means this never needs revisiting.
+  for (let i = 0; i < list.length; i += 100) {
+    const chunk = list.slice(i, i + 100);
+    try {
+      const res = await fetch("https://exp.host/--/api/v2/push/send", {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify(chunk),
+      });
+      if (!res.ok) logger.error("expo push send failed", { status: res.status, body: await res.text() });
+    } catch (err) {
+      logger.error("expo push send error", err);
+    }
+  }
+}
+
+/** One player's registered token for one league, or null if they never opened it on a device with push enabled. */
+async function tokenFor(db, leagueKey, playerId) {
+  const snap = await db.ref(`pushTokens/${leagueKey}_${playerId}`).get();
+  const v = snap.val();
+  return v && v.token ? v.token : null;
+}
+
+function pushMessage(to, title, body, data) {
+  return { to, title, body, data, sound: "default", priority: "high" };
+}
+
+// Same snake-draft math as app/lib/state.ts (draftOrderOf/draftSequence/
+// sequenceOf) — reimplemented here rather than imported, same as
+// autoDraftLeague's own snake() above: functions run as plain Node, not
+// through the app's bundler.
+function serverDraftOrderOf(lg) {
+  const ids = (lg.players || []).map((p) => p.id);
+  if (!lg.draftOrder || !lg.draftOrder.length) return ids;
+  const known = lg.draftOrder.filter((id) => ids.includes(id));
+  const added = ids.filter((id) => !known.includes(id));
+  return [...known, ...added];
+}
+function serverSequenceOf(lg) {
+  const order = serverDraftOrderOf(lg);
+  const seq = snake(order, lg.picksPerPlayer || 0);
+  return lg.pickOrder && lg.pickOrder.length === seq.length ? lg.pickOrder : seq;
+}
+
+// Fires on every draft state change (start, each pick, undo, reset) and
+// pushes only the person now on the clock — covers "the draft just started,
+// you're up first" and "it's your turn" with the same check.
+exports.notifyDraftTurn = onValueUpdated(
+  { ref: "/seasons/{seasonId}/leagues/{leagueKey}/draftState", region: REGION },
+  async (event) => {
+    const after = event.data.after.val();
+    if (!after || !after.started || after.complete) return;
+    const { seasonId, leagueKey } = event.params;
+    const db = getDatabase();
+    const lg = (await db.ref(`seasons/${seasonId}/leagues/${leagueKey}`).get()).val();
+    if (!lg) return;
+    const seq = serverSequenceOf(lg);
+    const onClockId = seq[after.currentPickIndex || 0];
+    if (!onClockId) return;
+
+    const before = event.data.before.val();
+    const wasOnClockId = before && before.started && !before.complete
+      ? serverSequenceOf(lg)[before.currentPickIndex || 0]
+      : null;
+    // Only the moment someone NEW comes on the clock — not every write to
+    // draftState (an undo, for instance, can restore the same person).
+    if (onClockId === wasOnClockId) return;
+
+    const token = await tokenFor(db, leagueKey, onClockId);
+    if (!token) return;
+    await sendExpoPush([
+      pushMessage(token, lg.name, "You're on the clock — it's your turn to pick.", {
+        type: "draft", leagueKey, seasonId,
+      }),
+    ]);
+  },
+);
+
+// Fires on every new chat message; notifies everyone else in the league.
+exports.notifyNewMessage = onValueCreated(
+  { ref: "/seasons/{seasonId}/messages/{leagueKey}/{messageId}", region: REGION },
+  async (event) => {
+    const msg = event.data.val();
+    if (!msg || !msg.authorId) return;
+    const { seasonId, leagueKey } = event.params;
+    const db = getDatabase();
+    const lg = (await db.ref(`seasons/${seasonId}/leagues/${leagueKey}`).get()).val();
+    if (!lg) return;
+
+    const people = (lg.players || []).flatMap((p) => (p.members && p.members.length ? p.members : [{ id: p.id, name: p.name }]));
+    const others = people.filter((p) => p.id !== msg.authorId);
+    if (!others.length) return;
+
+    const authorName = msg.authorName || "Someone";
+    const tokens = await Promise.all(others.map((p) => tokenFor(db, leagueKey, p.id)));
+    const messages = tokens
+      .map((token, i) => token && pushMessage(token, lg.name, `${authorName} sent a message`, {
+        type: "message", leagueKey, seasonId,
+      }))
+      .filter(Boolean);
+    await sendExpoPush(messages);
   },
 );
