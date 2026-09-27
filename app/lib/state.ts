@@ -517,7 +517,14 @@ export function sequenceOf(league: LeagueRecord): string[] {
   return custom && custom.length === snake.length ? custom : snake;
 }
 export function draftOrderOf(league: LeagueRecord): string[] {
-  return league.draftOrder && league.draftOrder.length ? league.draftOrder : league.players.map((p) => p.id);
+  const ids = league.players.map((p) => p.id);
+  if (!league.draftOrder?.length) return ids;
+  // A saved order predates anyone added (or removed) since — keep its order
+  // for whoever's still around, then tack on anyone new at the end, rather
+  // than hiding them from the draft order entirely.
+  const known = league.draftOrder.filter((id) => ids.includes(id));
+  const added = ids.filter((id) => !known.includes(id));
+  return [...known, ...added];
 }
 function picksMade(league: LeagueRecord) {
   return Object.keys(league.picks || {}).reduce((n, cid) => n + ownersOf(league, cid).length, 0);
