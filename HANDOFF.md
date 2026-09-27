@@ -97,6 +97,21 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 - Real sign-in testing (his ISP's certificate filter breaks Google sign-in in
   the simulator; use a hotspot or a real iPhone).
 
+## 2026-09-27
+- Push notifications: draft-turn ("you're on the clock") and new-chat-message
+  alerts are live via two Cloud Functions (notifyDraftTurn, notifyNewMessage),
+  sent through Expo's push relay to the tokens the app already registers
+  (`pushTokens/<leagueKey>_<playerId>`). Deployed, no app rebuild needed —
+  Android on the current build should already receive these. iOS needs the
+  `expo-notifications` plugin (added to `app.json`, not yet built) for the
+  push entitlement; that needs a fresh `eas build` whenever Matt's ready.
+  Not yet built: recap/pick-reminder alerts, and respecting each person's
+  notification toggles (those live only on-device right now, never synced
+  to the server, so every category currently goes to everyone).
+- Draft sound: the alert sound is an actual Survivor sound effect, so it's
+  gated to Survivor leagues only now (`terms.isSurvivor`); other shows get
+  the pick banner silently until there's a sound that fits them.
+
 ## 2026-09-26
 - Denver / Survivor 51 removed from Reality Check (played in Outlast only).
   Code side done; DB side is `scripts/remove-denver.sh` (run from the Mac,
