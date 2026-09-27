@@ -60,6 +60,10 @@ export type Terms = {
   hasTribes: boolean;
   hasIdols: boolean;
   hasStats: boolean;
+  /** Gates anything that's specifically Survivor's — right now just the draft
+   *  pick alert sound, which is an actual Survivor sting and sounds wrong
+   *  playing over an Amazing Race (or anything else's) draft. */
+  isSurvivor: boolean;
 };
 
 export function termsFor(meta: SeasonMeta | null | undefined): Terms {
@@ -76,5 +80,6 @@ export function termsFor(meta: SeasonMeta | null | undefined): Terms {
     hasTribes: meta ? !!meta.features?.tribes : true,
     hasIdols: meta ? !!meta.features?.idols : true,
     hasStats: meta ? !!meta.features?.stats : true,
+    isSurvivor: survivor,
   };
 }

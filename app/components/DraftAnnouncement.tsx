@@ -26,7 +26,7 @@ export default function DraftAnnouncement() {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
   const insets = useSafeAreaInsets();
-  const { root: liveRoot, leagueKey, myLeagueKeys } = useLeague();
+  const { root: liveRoot, leagueKey, myLeagueKeys, terms } = useLeague();
   const { practice, root } = useDraftRoot(liveRoot);
   // Follow whichever of my leagues is actually drafting, not just the one on
   // screen — Matt and AJ could be looking at Porterville while Denver drafts.
@@ -67,13 +67,15 @@ export default function DraftAnnouncement() {
     const playerName = league.players.find((p) => p.id === last.playerId)?.name ?? last.playerId;
     setShown({ playerName, castName, castId: last.contestantId });
 
-    try {
-      player.seekTo(0);
-      player.play();
-    } catch {
-      // A missing audio route shouldn't take the announcement down with it.
+    if (terms.isSurvivor) {
+      try {
+        player.seekTo(0);
+        player.play();
+      } catch {
+        // A missing audio route shouldn't take the announcement down with it.
+      }
     }
-  }, [last?.at, last, root, league, player, sourceId]);
+  }, [last?.at, last, root, league, player, sourceId, terms.isSurvivor]);
 
   useEffect(() => {
     if (!shown) return;
