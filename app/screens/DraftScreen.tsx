@@ -420,9 +420,11 @@ export default function DraftScreen({ navigation }: Props) {
   const seq = sequenceOf(league);
   const turnId = currentTurnPlayerId(league);
   const iAmOnClock = turnId === teamId;
-  // Practice only: the commissioner can pick for whoever is on the clock, so a
-  // full round can be rehearsed without everyone online.
-  const pickForClock = practice && canRun && !!turnId && !iAmOnClock;
+  // The commissioner can pick for whoever is on the clock — in practice, so a
+  // full round can be rehearsed without everyone online, and in the real
+  // draft too, for a manually-added player who isn't on the app, or anyone
+  // else who's stuck (no signal, phone dead, whatever).
+  const pickForClock = canRun && !!turnId && !iAmOnClock;
   const canPick = iAmOnClock || pickForClock;
   const locked = draftSlack(root, league) <= 0;
 
@@ -497,7 +499,11 @@ export default function DraftScreen({ navigation }: Props) {
                     Pick {(ds.currentPickIndex || 0) + 1} of {seq.length}{locked ? ` — unpicked ${terms.units} only now` : ''}
                   </Text>
                   {iAmOnClock && <Text style={styles.yourTurn}>It's your turn — tap a {terms.unit} below.</Text>}
-                  {pickForClock && <Text style={styles.yourTurn}>Practice: tap a {terms.unit} to pick for {nameOf(turnId!)}.</Text>}
+                  {pickForClock && (
+                    <Text style={styles.yourTurn}>
+                      {practice ? 'Practice: tap' : 'Tap'} a {terms.unit} to pick for {nameOf(turnId!)}.
+                    </Text>
+                  )}
                   {turnId && seq[(ds.currentPickIndex || 0) + 1] && (
                     <Text style={styles.upNext}>Up next: {nameOf(seq[(ds.currentPickIndex || 0) + 1])}</Text>
                   )}
