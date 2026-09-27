@@ -227,6 +227,46 @@ exports.createLeague = onCall({ region: REGION }, async (request) => {
   return { seasonId, leagueKey, code, personId: uid };
 });
 
+// Deleting a league touches nodes an ordinary member can't write to directly
+// (userLeagues/<someone else's uid>, inviteCodes — both server-only by
+// design), so this runs as admin rather than a pile of client writes. Wipes
+// the league itself and everything filed under its key: chat, predictions,
+// season pick, draft boards, read receipts, its invite code, and every
+// member's userLeagues entry for it.
+exports.deleteLeague = onCall({ region: REGION }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+  const d = request.data || {};
+  const seasonId = String(d.seasonId || "");
+  const leagueKey = String(d.leagueKey || "");
+  if (!seasonId || !leagueKey) throw new HttpsError("invalid-argument", "Missing league.");
+
+  const db = getDatabase();
+  const lg = (await db.ref(`seasons/${seasonId}/leagues/${leagueKey}`).get()).val();
+  if (!lg) throw new HttpsError("not-found", "That league doesn't exist.");
+
+  const personId = (lg.memberIds || {})[uid];
+  const isCommissioner = (lg.commissionerIds || []).includes(uid) || (personId && (lg.commissionerIds || []).includes(personId));
+  const isAdmin = (await db.ref(`admins/${uid}`).get()).val() === true;
+  if (!isCommissioner && !isAdmin) throw new HttpsError("permission-denied", "Only a commissioner can delete this league.");
+
+  const removals = {
+    [`seasons/${seasonId}/leagues/${leagueKey}`]: null,
+    [`seasons/${seasonId}/messages/${leagueKey}`]: null,
+    [`seasons/${seasonId}/predictions/${leagueKey}`]: null,
+    [`seasons/${seasonId}/winnerPicks/${leagueKey}`]: null,
+    [`draftBoards/${leagueKey}`]: null,
+    [`reads/${leagueKey}`]: null,
+  };
+  for (const memberUid of Object.keys(lg.memberIds || {})) {
+    removals[`userLeagues/${memberUid}/${leagueKey}`] = null;
+  }
+  if (lg.inviteCode) removals[`inviteCodes/${lg.inviteCode}`] = null;
+
+  await db.ref().update(removals);
+  return { ok: true };
+});
+
 exports.joinLeague = onCall({ region: REGION }, async (request) => {
   const uid = request.auth && request.auth.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");

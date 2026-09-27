@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useThemeColors } from '../../contexts/ThemeContext';
 import type { ColorScheme } from '../../theme';
+import type { RootStackParamList } from '../../navigation';
 import Panel from '../../components/Panel';
 import FlipCard from '../../components/FlipCard';
 import ScoreModal from '../../components/ScoreModal';
@@ -15,6 +18,10 @@ import CastAvatar from '../../components/CastAvatar';
 // Same three sizes as the site (Survivor League/app.js MEMORY_PAIR_OPTIONS) —
 // shared leaderboard, keyed by pair count.
 const PAIR_OPTIONS = [6, 8, 12] as const;
+// Matching identical initials-on-a-tribe-colour tile isn't a memory game —
+// it needs real photos to be worth playing, so the smallest board's worth
+// has to be in before this unlocks at all.
+const MIN_PHOTOS = PAIR_OPTIONS[0];
 const CARD_GAP = 8;
 const COLUMNS = 4;
 
@@ -50,10 +57,14 @@ export default function MemoryGame({ boardWidth }: { boardWidth: number }) {
   const startRef = useRef(0);
   const { scores, record } = useLeaderboard('memory', String(pairs));
   const { contestants, loading } = useLiveContestants();
-  const { terms } = useLeague();
+  const { terms, league, isCommissioner } = useLeague();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const photoCount = contestants.filter((c) => league.castPhotos?.[c.id]).length;
+  const hasEnoughPhotos = photoCount >= Math.min(MIN_PHOTOS, contestants.length);
   // A small cast (e.g. a dry-run show) can't fill every pair size — only
-  // offer sizes the live cast can actually cover.
-  const sizeOptions = PAIR_OPTIONS.filter((n) => n <= contestants.length);
+  // offer sizes the live cast can actually cover, and never more pairs than
+  // there are real photos for.
+  const sizeOptions = PAIR_OPTIONS.filter((n) => n <= contestants.length && n <= photoCount);
   const maxPairs = sizeOptions[sizeOptions.length - 1] ?? PAIR_OPTIONS[0];
 
   useEffect(() => {
@@ -132,6 +143,19 @@ export default function MemoryGame({ boardWidth }: { boardWidth: number }) {
           <Text style={styles.introBody}>Match every {terms.unit} with their twin tile.</Text>
           {loading ? (
             <Text style={styles.introBody}>Loading the cast…</Text>
+          ) : !hasEnoughPhotos ? (
+            <>
+              <Text style={styles.introBody}>
+                Matching initials isn't much of a memory game — this unlocks once{' '}
+                {Math.min(MIN_PHOTOS, contestants.length)} {terms.units} have a real photo
+                ({photoCount} so far).
+              </Text>
+              {isCommissioner && (
+                <Pressable style={styles.beginButton} onPress={() => navigation.navigate('CastPhotos', { setup: false })}>
+                  <Text style={styles.beginButtonText}>Add cast photos</Text>
+                </Pressable>
+              )}
+            </>
           ) : sizeOptions.length === 0 ? (
             <Text style={styles.introBody}>Not enough of the cast is in yet to play.</Text>
           ) : (

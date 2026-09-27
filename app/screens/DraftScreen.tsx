@@ -446,13 +446,26 @@ export default function DraftScreen({ navigation }: Props) {
     return null;
   };
 
-  const tap = async (contestantId: string) => {
+  const tap = (contestantId: string) => {
     const blocked = blockReason(contestantId);
     if (blocked) { setMessage(blocked); return; }
     if (!turnId) return;
+    const label = contestants.find((c) => c.id === contestantId)?.name ?? `this ${terms.unit}`;
     setMessage('');
-    const res = await makeDraftPick(leagueKey, contestantId, turnId, practice);
-    if (!res.ok) setMessage(DRAFT_FAIL_MESSAGES[res.reason] || "That pick didn't go through.");
+    Alert.alert(
+      iAmOnClock ? `Draft ${label}?` : `Draft ${label} for ${nameOf(turnId)}?`,
+      "This locks in the pick right away — everyone sees it immediately.",
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Draft',
+          onPress: async () => {
+            const res = await makeDraftPick(leagueKey, contestantId, turnId, practice);
+            if (!res.ok) setMessage(DRAFT_FAIL_MESSAGES[res.reason] || "That pick didn't go through.");
+          },
+        },
+      ],
+    );
   };
   const finish = () => {
     const made = contestants.reduce((n, c) => n + ownersOf(league!, c.id).length, 0);

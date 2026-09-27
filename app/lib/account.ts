@@ -136,3 +136,17 @@ export async function joinLeague(code: string, playerName: string, claimId?: str
     throw friendly(err, "Couldn't join right now. Check your connection and try again.");
   }
 }
+
+/**
+ * Commissioner-only: permanently deletes a league — chat, predictions, the
+ * season pick, draft boards, its invite code, and it drops out of every
+ * member's account too. Nothing else on the season (cast, other leagues) is
+ * touched. Confirmed by typing the league's name; there's no undo.
+ */
+export async function deleteLeague(seasonId: string, leagueKey: string): Promise<void> {
+  try {
+    await httpsCallable<{ seasonId: string; leagueKey: string }, { ok: true }>(functions, 'deleteLeague')({ seasonId, leagueKey });
+  } catch (err) {
+    throw friendly(err, "Couldn't delete the league right now. Check your connection and try again.");
+  }
+}

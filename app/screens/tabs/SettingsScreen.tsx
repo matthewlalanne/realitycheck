@@ -16,6 +16,8 @@ import { PinnedHeader, CONTENT_TOP_GAP } from '../../components/ScreenHeader';
 import { useLeague } from '../../contexts/LeagueContext';
 import { signOutOfLeague } from '../../lib/leagueAuth';
 import { clearMessages, draftDone, renamePersonIn } from '../../lib/state';
+import { activeSeasonId } from '../../lib/season';
+import DeleteLeagueModal from '../../components/DeleteLeagueModal';
 import PlayersEditor from '../../components/PlayersEditor';
 import DraftTimeEditor from '../../components/DraftTimeEditor';
 import { saveProfileName } from '../../lib/account';
@@ -39,13 +41,14 @@ export default function SettingsScreen({ navigation }: Props) {
   const colors = useThemeColors();
   const [editingPlayers, setEditingPlayers] = useState(false);
   const [editingDraftTime, setEditingDraftTime] = useState(false);
+  const [deletingLeague, setDeletingLeague] = useState(false);
   const styles = makeStyles(colors);
   // Tapping the tab you're already on jumps back to the top, the way
   // every other iOS app behaves.
   const scrollRef = useRef<ScrollView>(null);
   useScrollToTop(scrollRef);
   const { mode, resolvedMode, theme, setMode, setTheme } = useTheme();
-  const { root, league, leagueKey, playerId, teamId, playerName, isCommissioner, isAdmin, terms, onLogOut } = useLeague();
+  const { root, league, leagueKey, playerId, teamId, playerName, isCommissioner, isAdmin, terms, onLogOut, onExitLeague } = useLeague();
   const avatars = useAvatars();
   // Your photo is yours, not the league's — set it once and it follows you
   // into every league you play in.
@@ -217,6 +220,11 @@ export default function SettingsScreen({ navigation }: Props) {
               )
             }
           />
+          <SettingsAction
+            label={`Delete ${league.name}`}
+            destructive
+            onPress={() => setDeletingLeague(true)}
+          />
         </Panel>
       )}
 
@@ -270,6 +278,15 @@ export default function SettingsScreen({ navigation }: Props) {
 
 
       </ScrollView>
+
+      <DeleteLeagueModal
+        visible={deletingLeague}
+        seasonId={activeSeasonId()}
+        leagueKey={leagueKey}
+        leagueName={league.name}
+        onClose={() => setDeletingLeague(false)}
+        onDeleted={() => { setDeletingLeague(false); onExitLeague?.(); }}
+      />
 
       <PlayersEditor
         visible={editingPlayers}
