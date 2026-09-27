@@ -350,9 +350,13 @@ export default function DraftScreen({ navigation }: Props) {
           <Panel style={{ gap: 10 }}>
             <Text style={styles.sectionTitle}>Draft order</Text>
             <Text style={styles.formatBody}>
-              {canRun
-                ? "The order for round one; round two runs back the other way. Someone not here yet? Send both their picks to the end with the last button."
-                : 'The order for round one; round two runs back the other way.'}
+              {league.picksPerPlayer > 1
+                ? (canRun
+                  ? "The order for round one; round two runs back the other way. Someone not here yet? Send both their picks to the end with the last button."
+                  : 'The order for round one; round two runs back the other way.')
+                : (canRun
+                  ? `Everyone gets one pick, in this order. Someone not here yet? Send them to the end with the last button.`
+                  : 'Everyone gets one pick, in this order.')}
             </Text>
             {order.map((id, i) => (
               <View key={id} style={styles.orderRow}>
@@ -437,7 +441,7 @@ export default function DraftScreen({ navigation }: Props) {
     if (!canPick) return `It's ${nameOf(turnId)}'s turn, not yours.`;
     const owners = ownersOf(league!, contestantId);
     if (owners.includes(turnId)) return `You already have that ${terms.unit}.`;
-    if (owners.length >= 2) return `Taken — ${owners.map(nameOf).join(' & ')} already have them.`;
+    if (owners.length >= (league!.maxOwners ?? 2)) return `Taken — ${owners.map(nameOf).join(' & ')} already have ${owners.length > 1 ? 'them' : 'it'}.`;
     if (owners.length > 0 && draftSlack(root!, league!) <= 0) return `Down to the wire — only unpicked ${terms.units} are available now.`;
     return null;
   };
@@ -548,7 +552,10 @@ export default function DraftScreen({ navigation }: Props) {
                     <Text style={styles.name}>{c.name}</Text>
                     {myRank ? <Text style={styles.rankChip}>#{myRank}</Text> : null}
                   </View>
-                  <Text style={styles.meta}>{owners.length ? owners.map(nameOf).join(' & ') : 'Unpicked'} ({owners.length}/2)</Text>
+                  <Text style={styles.meta}>
+                    {owners.length ? owners.map(nameOf).join(' & ') : 'Unpicked'}
+                    {(league.maxOwners ?? 2) > 1 ? ` (${owners.length}/${league.maxOwners ?? 2})` : ''}
+                  </Text>
                   {/* The whole point of the notes: readable without a tap,
                       while you're deciding. */}
                   {myNote ? <Text style={styles.noteText} numberOfLines={3}>{myNote}</Text> : null}

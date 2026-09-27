@@ -75,15 +75,21 @@ function RootNavigator() {
   const meta = root?.meta ?? null;
   if (seasonId) setActiveSeason(seasonId, meta);
 
-  // Reopen the league you were last in, once the list has loaded.
+  // Reopen the league you were last in, once the list has loaded. Only one
+  // league on the account at all -> straight there, every launch, same as if
+  // it were "last": the all-leagues list has nothing to offer someone who
+  // can't be in more than one league yet, so it's just an extra tap.
   const [restored, setRestored] = useState(false);
   useEffect(() => {
     if (restored || !uid || leaguesLoading || lastLoading) return;
     setRestored(true);
     const last = lastLeagueFor(uid);
-    const hit = myLeagues.find((l) => l.leagueKey === last);
-    if (hit) setOpen(hit);
-  }, [restored, uid, leaguesLoading, lastLoading, myLeagues, lastLeagueFor]);
+    const hit = myLeagues.find((l) => l.leagueKey === last) ?? (myLeagues.length === 1 ? myLeagues[0] : null);
+    if (hit) {
+      setOpen(hit);
+      saveLastLeague(uid, hit.leagueKey);
+    }
+  }, [restored, uid, leaguesLoading, lastLoading, myLeagues, lastLeagueFor, saveLastLeague]);
 
   if (authLoading || (uid && (profileLoading || lastLoading)) || !minSplashDone) {
     return <SplashScreen />;

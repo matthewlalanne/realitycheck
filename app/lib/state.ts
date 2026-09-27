@@ -561,7 +561,7 @@ export function currentTurnPlayerId(league: LeagueRecord): string | null {
 }
 export function isPickEligible(root: LeagueRoot, league: LeagueRecord, contestantId: string, playerId: string) {
   const owners = ownersOf(league, contestantId);
-  if (owners.length >= 2 || owners.includes(playerId)) return false;
+  if (owners.length >= (league.maxOwners ?? 2) || owners.includes(playerId)) return false;
   if (owners.length > 0 && draftSlack(root, league) <= 0) return false;
   return true;
 }
