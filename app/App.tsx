@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { StatusBar, setStatusBarStyle } from 'expo-status-bar';
 import { AppState, ImageBackground, View } from 'react-native';
 import { NavigationContainer, DarkTheme } from '@react-navigation/native';
@@ -79,17 +79,25 @@ function RootNavigator() {
   // league on the account at all -> straight there, every launch, same as if
   // it were "last": the all-leagues list has nothing to offer someone who
   // can't be in more than one league yet, so it's just an extra tap.
-  const [restored, setRestored] = useState(false);
+  //
+  // Only ever forces this once per sign-in (autoOpenedFor), so backing out to
+  // the list on purpose (Settings > All leagues) sticks. But it does NOT give
+  // up after a single look: if that first pass lands before myLeagues has
+  // genuinely loaded — a blip right after a fresh sign-in, or a permission
+  // hiccup before the auth token's fully attached — it keeps re-checking on
+  // every update instead of stranding you on the list forever because the
+  // very first read happened to be incomplete.
+  const autoOpenedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (restored || !uid || leaguesLoading || lastLoading) return;
-    setRestored(true);
+    if (!uid || leaguesLoading || lastLoading || autoOpenedFor.current === uid) return;
     const last = lastLeagueFor(uid);
     const hit = myLeagues.find((l) => l.leagueKey === last) ?? (myLeagues.length === 1 ? myLeagues[0] : null);
     if (hit) {
+      autoOpenedFor.current = uid;
       setOpen(hit);
       saveLastLeague(uid, hit.leagueKey);
     }
-  }, [restored, uid, leaguesLoading, lastLoading, myLeagues, lastLeagueFor, saveLastLeague]);
+  }, [uid, leaguesLoading, lastLoading, myLeagues, lastLeagueFor, saveLastLeague]);
 
   if (authLoading || (uid && (profileLoading || lastLoading)) || !minSplashDone) {
     return <SplashScreen />;

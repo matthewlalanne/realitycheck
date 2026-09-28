@@ -35,6 +35,13 @@ export type MyLeague = { seasonId: string; leagueKey: string; name: string; pers
 
 export function useMyLeagues(uid: string | null | undefined): { leagues: MyLeague[]; loading: boolean } {
   const [leagues, setLeagues] = useState<MyLeague[] | null>(null);
+  // A retry counter, bumped on error to re-subscribe rather than settle for
+  // whatever that one failed attempt returned. A fresh sign-in can hit the
+  // database before the auth token's fully attached — that read fails, but
+  // it isn't "this account has no leagues", and treating it as one stranded
+  // people who had exactly one league on the all-leagues list they should
+  // never have landed on.
+  const [retry, setRetry] = useState(0);
   useEffect(() => {
     if (!uid) { setLeagues([]); return; }
     return onValue(
@@ -47,9 +54,9 @@ export function useMyLeagues(uid: string | null | undefined): { leagues: MyLeagu
             .sort((a, b) => (a.joinedAt ?? 0) - (b.joinedAt ?? 0)),
         );
       },
-      () => setLeagues([]),
+      () => { setTimeout(() => setRetry((r) => r + 1), 1500); },
     );
-  }, [uid]);
+  }, [uid, retry]);
   return { leagues: leagues ?? [], loading: leagues === null };
 }
 
