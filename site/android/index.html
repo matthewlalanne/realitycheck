@@ -19,9 +19,8 @@ nav{margin-top:40px;font-size:14px}nav a{margin-right:16px}
 </ol>
 <p class="dim">Already installed? Updates arrive inside the app on their own — no need to download again.</p>
 <script>
-// Hosted straight from this site — site/android/reality-check.apk — rather
-// than an expo.dev build link, since a locally-built APK has no such URL.
-var APK_URL = "/android/reality-check.apk";
+// Points at the finished EAS build's own page (has its own Install button).
+var APK_URL = "https://expo.dev/accounts/mattlalanne/projects/tribe-league/builds/33eb7aaa-a22d-448e-99ff-63eccd2b4575";
 var a = document.getElementById("dl");
 if (APK_URL) a.href = APK_URL; else { a.textContent = "Download coming soon"; a.style.opacity = .5; a.removeAttribute("href"); }
 </script>
