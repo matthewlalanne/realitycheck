@@ -1,10 +1,15 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx --yes firebase-tools@latest deploy --only database:*)",
-      "Bash(npx --yes firebase-tools@latest database:set /seasons/amazing-race-39/*)",
+      "Bash(npx --yes firebase-tools@latest:*)",
       "Bash(npx --yes eas-cli@latest update:*)",
-      "Bash(bash scripts/write-recap-draft.sh:*)"
+      "Bash(bash scripts/*)",
+      "Bash(git push:*)",
+      "Bash(npm ci:*)",
+      "Bash(npx tsc:*)"
+    ],
+    "ask": [
+      "Bash(npx --yes eas-cli@latest build:*)"
     ]
   }
 }
