@@ -273,7 +273,10 @@ exports.joinLeague = onCall({ region: REGION }, async (request) => {
   const d = request.data || {};
   const code = String(d.code || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
   const db = getDatabase();
-  const idx = (await db.ref(`inviteCodes/${code}`).get()).val();
+  // A personal invite (claimInvites, from createClaimInvite) makes whoever
+  // opens it one specific roster player, picks and history included.
+  const claim = (await db.ref(`claimInvites/${code}`).get()).val();
+  const idx = claim || (await db.ref(`inviteCodes/${code}`).get()).val();
   if (!idx) throw new HttpsError("not-found", "No league with that code.");
   const { seasonId, leagueKey } = idx;
   const lgRef = db.ref(`seasons/${seasonId}/leagues/${leagueKey}`);
@@ -287,6 +290,18 @@ exports.joinLeague = onCall({ region: REGION }, async (request) => {
 
   const memberIds = lg.memberIds || {};
   if (memberIds[uid]) return finish(memberIds[uid]);
+
+  if (claim) {
+    const res = await lgRef.child("memberIds").transaction((m) => {
+      m = m || {};
+      if (Object.values(m).includes(claim.personId)) return; // abort: someone already has this player
+      m[uid] = claim.personId;
+      return m;
+    });
+    if (!res.committed) throw new HttpsError("already-exists", "Someone already joined as that player. Ask the commissioner for a new link.");
+    await db.ref(`claimInvites/${code}`).remove();
+    return finish(claim.personId);
+  }
 
   // A league copied in with its roster already filled (claimable) lets people
   // take over an existing player — their picks and history come with them.
@@ -326,6 +341,47 @@ exports.joinLeague = onCall({ region: REGION }, async (request) => {
   });
   if (!res.committed || !res.snapshot.exists()) throw new HttpsError("aborted", "Couldn't join right now. Try again.");
   return finish(uid);
+});
+
+// Personal invite for one roster player who was added by name (no account
+// yet). Only whoever opens it becomes that player, so there's no "pick
+// yourself" list to grab the wrong name from. Commissioners and admins only.
+// Same 6-character format as league codes, so the Join screen takes either.
+exports.createClaimInvite = onCall({ region: REGION }, async (request) => {
+  const uid = request.auth && request.auth.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+  const d = request.data || {};
+  const seasonId = String(d.seasonId || "");
+  const leagueKey = String(d.leagueKey || "");
+  const personId = String(d.personId || "");
+  if (!seasonId || !leagueKey || !personId) throw new HttpsError("invalid-argument", "Missing player.");
+
+  const db = getDatabase();
+  const lg = (await db.ref(`seasons/${seasonId}/leagues/${leagueKey}`).get()).val();
+  if (!lg) throw new HttpsError("not-found", "That league doesn't exist.");
+  const me = (lg.memberIds || {})[uid];
+  const isCommissioner = (lg.commissionerIds || []).includes(uid) || (me && (lg.commissionerIds || []).includes(me));
+  const isAdmin = (await db.ref(`admins/${uid}`).get()).val() === true;
+  if (!isCommissioner && !isAdmin) throw new HttpsError("permission-denied", "Only a commissioner can invite players.");
+
+  const people = (lg.players || []).flatMap((p) => (p.members && p.members.length ? p.members : [{ id: p.id, name: p.name }]));
+  const person = people.find((p) => p.id === personId);
+  if (!person) throw new HttpsError("not-found", "That player isn't in the league.");
+  if (Object.values(lg.memberIds || {}).includes(personId)) throw new HttpsError("already-exists", `${person.name} already has an account in this league.`);
+
+  // One live invite per player: reuse it rather than leaving several around.
+  const existing = (await db.ref("claimInvites").orderByChild("personId").equalTo(personId).get()).val() || {};
+  const reuse = Object.entries(existing).find(([, v]) => v.leagueKey === leagueKey);
+  if (reuse) return { code: reuse[0], name: person.name };
+
+  let code = randomCode();
+  for (let i = 0; i < 8; i++) {
+    const taken = (await db.ref(`inviteCodes/${code}`).get()).exists() || (await db.ref(`claimInvites/${code}`).get()).exists();
+    if (!taken) break;
+    code = randomCode();
+  }
+  await db.ref(`claimInvites/${code}`).set({ seasonId, leagueKey, personId, createdBy: uid, createdAt: Date.now() });
+  return { code, name: person.name };
 });
 
 // ---------------------------------------------------------------------------

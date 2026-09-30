@@ -145,6 +145,20 @@ export async function joinLeague(code: string, playerName: string, claimId?: str
 }
 
 /**
+ * Commissioner-only: a personal 6-character invite for one roster player added
+ * by name. Whoever joins with it becomes that player, picks and history
+ * included. Asking again for the same player returns the same code.
+ */
+export async function createClaimInvite(seasonId: string, leagueKey: string, personId: string): Promise<{ code: string; name: string }> {
+  try {
+    const res = await httpsCallable<{ seasonId: string; leagueKey: string; personId: string }, { code: string; name: string }>(functions, 'createClaimInvite')({ seasonId, leagueKey, personId });
+    return res.data;
+  } catch (err) {
+    throw friendly(err, "Couldn't make an invite right now. Check your connection and try again.");
+  }
+}
+
+/**
  * Commissioner-only: permanently deletes a league — chat, predictions, the
  * season pick, draft boards, its invite code, and it drops out of every
  * member's account too. Nothing else on the season (cast, other leagues) is

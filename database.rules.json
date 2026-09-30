@@ -401,6 +401,13 @@
         }
       }
     },
+    "claimInvites": {
+      // Personal invites for one roster player (functions: createClaimInvite,
+      // joinLeague). Server only.
+      ".read": false,
+      ".write": false,
+      ".indexOn": ["personId"]
+    },
     "gifCache": {
       ".read": false,
       ".write": false

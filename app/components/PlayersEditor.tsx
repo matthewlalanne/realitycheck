@@ -7,6 +7,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +17,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors } from '../contexts/ThemeContext';
 import type { ColorScheme } from '../theme';
 import { LIMITS, clamp } from '../lib/limits';
+import { createClaimInvite } from '../lib/account';
+import { activeSeasonId } from '../lib/season';
 import { addLeaguePlayer, canRemovePlayers, removeLeaguePlayer, renamePersonIn, type LeagueRecord } from '../lib/state';
 
 // Commissioner tool: add someone who isn't drafting from their own account
@@ -44,6 +47,24 @@ export default function PlayersEditor({
   const [renameDraft, setRenameDraft] = useState('');
 
   const removable = canRemovePlayers(league);
+  // Added by name and nobody's signed in as them yet: they can get a personal
+  // invite that makes their account this player.
+  const claimed = new Set(Object.values(league.memberIds ?? {}));
+  const invitable = (p: { id: string; members?: unknown[] }) => !claimed.has(p.id) && !(p.members && p.members.length);
+
+  const invite = async (id: string, name: string) => {
+    setBusyId(id);
+    try {
+      const { code } = await createClaimInvite(activeSeasonId(), leagueKey, id);
+      await Share.share({
+        message: `${name}, join ${league.name} on Reality Check as yourself (your picks come with you): https://playrealitycheck.web.app/join/${code}\n\nOr in the app: Join a league > code ${code}`,
+      });
+    } catch (err) {
+      Alert.alert("Couldn't make an invite", err instanceof Error ? err.message : 'Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   const submitAdd = async () => {
     const name = newName.trim();
@@ -105,7 +126,7 @@ export default function PlayersEditor({
           <View style={styles.headRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.title}>Players</Text>
-              <Text style={styles.sub}>Rename anyone, or add someone who isn't on the app.</Text>
+              <Text style={styles.sub}>Rename anyone, or add someone who isn't on the app. Tap ✈︎ to send someone added by name a personal invite.</Text>
             </View>
             <Pressable onPress={onClose} hitSlop={8}>
               <Ionicons name="close" size={22} color={colors.textDim} />
@@ -138,6 +159,11 @@ export default function PlayersEditor({
               ) : (
                 <View style={styles.row}>
                   <Text style={styles.name} numberOfLines={1}>{item.name}</Text>
+                  {invitable(item) && (
+                    <Pressable onPress={() => invite(item.id, item.name)} hitSlop={8} disabled={busyId === item.id} accessibilityLabel={`Invite ${item.name}`}>
+                      <Ionicons name="paper-plane-outline" size={18} color={colors.accent} />
+                    </Pressable>
+                  )}
                   <Pressable onPress={() => { setRenamingId(item.id); setRenameDraft(item.name); }} hitSlop={8} disabled={busyId === item.id}>
                     <Ionicons name="create-outline" size={18} color={colors.accent2} />
                   </Pressable>
