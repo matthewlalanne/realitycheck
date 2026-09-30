@@ -30,7 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { sanitizeStat } from '../lib/seasonStats';
 import { textOnTribe, tribesOf } from '../lib/tribes';
 import { shortName, type EpisodeStat } from '../lib/state';
-import { clearRecapDraft, saveEditorDraft, useRecapDrafts, type RecapDraft } from '../lib/recapDraft';
+import { clearRecapDraft, isRaceDraft, saveEditorDraft, useRecapDrafts, type RecapDraft } from '../lib/recapDraft';
 import { usePreventRemove } from '@react-navigation/native';
 import { parseRecap, recapParts } from '../lib/recap';
 
@@ -48,7 +48,8 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   const notes = useEpisodeNotes();
   const savedRecap = notes[String(episode)] ?? '';
 
-  const { root } = useLeague();
+  const { root, terms } = useLeague();
+  const race = terms.isRace;
   const initialParts = recapParts(root, episode);
   const [recap, setRecap] = useState(initialParts.body);
   const [title, setTitle] = useState(initialParts.title ?? '');
@@ -217,6 +218,16 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
     new Set(Object.entries(stats).filter(([, st]) => st && f(st)).map(([id]) => id));
   const toggleField = (cid: string, field: 'immunity' | 'reward' | 'journey') =>
     patchStat(cid, { [field]: !stats[cid]?.[field] });
+  // Race legs: one winner, and at most one team saved by a non-elimination leg.
+  const pickOnly = (cid: string, field: 'legWin' | 'savedLast') => {
+    const on = !stats[cid]?.[field];
+    setStats((prev) => {
+      const next: Record<string, EpisodeStat> = {};
+      Object.entries(prev).forEach(([id, st]) => { next[id] = { ...st, [field]: undefined }; });
+      if (on) next[cid] = { ...(next[cid] ?? {}), [field]: true };
+      return next;
+    });
+  };
   const voteRows = eligible
     .filter((c) => (stats[c.id]?.votes ?? 0) > 0)
     .sort((a, b) => (stats[b.id]?.votes ?? 0) - (stats[a.id]?.votes ?? 0));
@@ -305,6 +316,16 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
     const parts = parseRecap(draft.recap);
     setTitle(d.title ?? parts.title ?? '');
     setRecap(parts.title ? parts.body : (draft.recap ?? ''));
+    if (isRaceDraft(d)) {
+      const known = (id: string | null) => !!id && eligible.some((c) => c.id === id);
+      if (d.eliminated) setOut(d.eliminated.filter(known));
+      const next: Record<string, EpisodeStat> = {};
+      if (known(d.legWinner)) next[d.legWinner!] = { legWin: true };
+      if (d.nonElimination && known(d.savedLast)) next[d.savedLast!] = { ...(next[d.savedLast!] ?? {}), savedLast: true };
+      setStats(next);
+      setDraftNeeds(d.needsMatt ?? []);
+      return;
+    }
     if (d.votedOut) setOut(d.votedOut.filter((id) => eligible.some((c) => c.id === id)));
     const next: Record<string, EpisodeStat> = {};
     const put = (id: string, st: EpisodeStat) => { next[id] = { ...(next[id] ?? {}), ...st }; };
@@ -428,7 +449,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             style={styles.titleInput}
             value={title}
             onChangeText={setTitle}
-            placeholder="e.g. Permanent Uncertainty"
+            placeholder={race ? 'e.g. We\'re Not in Kansas Anymore' : 'e.g. Permanent Uncertainty'}
             placeholderTextColor={colors.textDim}
             maxLength={LIMITS.episodeTitle}
             returnKeyType="done"
@@ -459,8 +480,10 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
         </Panel>
 
         <Panel style={styles.section}>
-          <Text style={styles.sectionLabel}>VOTED OUT</Text>
-          <Text style={styles.hint}>Check everyone who left this episode.</Text>
+          <Text style={styles.sectionLabel}>{race ? 'ELIMINATED' : 'VOTED OUT'}</Text>
+          <Text style={styles.hint}>
+            {race ? 'Check the team(s) eliminated this leg. Leave empty on a non-elimination leg.' : 'Check everyone who left this episode.'}
+          </Text>
           {eligible.map((c) => {
             const checked = out.includes(c.id);
             const isQuit = quit.includes(c.id);
@@ -477,7 +500,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
                     <View style={[styles.checkbox, styles.checkboxSmall, isQuit && styles.checkboxOn]}>
                       {isQuit && <Text style={styles.checkmark}>✓</Text>}
                     </View>
-                    <Text style={styles.quitLabel}>Left by quitting or medical evacuation (not voted out)</Text>
+                    <Text style={styles.quitLabel}>{race ? 'Quit or withdrew (medical, etc.), not last at the mat' : 'Left by quitting or medical evacuation (not voted out)'}</Text>
                   </Pressable>
                 )}
               </View>
@@ -485,6 +508,17 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
           })}
         </Panel>
 
+        {race && (
+          <Panel style={styles.section}>
+            <Text style={styles.sectionLabel}>LEG RESULTS</Text>
+            <Text style={styles.expandLabel}>Won the leg</Text>
+            <CastChips cast={alive} selected={idsWhere((st) => !!st.legWin)} onToggle={(id) => pickOnly(id, 'legWin')} />
+            <Text style={styles.expandLabel}>Last, but a non-elimination leg (stays in)</Text>
+            <CastChips cast={alive} selected={idsWhere((st) => !!st.savedLast)} onToggle={(id) => pickOnly(id, 'savedLast')} />
+          </Panel>
+        )}
+
+        {!race && (<>
         {/* Every episode has a vote and an immunity result, so those come
             first; the things that only sometimes happen sit below. */}
         <Panel style={styles.section}>
@@ -596,6 +630,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             <Text style={styles.checkLabel}>The tribes merged this episode</Text>
           </Pressable>
         </Panel>
+        </>)}
 
         <Pressable style={styles.notifyRow} onPress={() => setNotify((v) => !v)}>
           <View style={[styles.checkbox, notify && styles.checkboxOn]}>

@@ -45,7 +45,7 @@
 // `recapDrafts` sits out here for the same reason, and so nothing in it is
 // visible in the app until the commissioner loads it into the episode editor
 // and publishes: it's what the weekly recap task writes (via admin), holding
-// Claude's draft recap and stats for an episode, plus the commissioner's own
+// Claude's draft recap and stats for an episode (filed per season), plus the commissioner's own
 // saved work in progress (`editor`, from the editor's Save draft button).
 //
 // `node "Survivor League/check-record.mjs"` audits the live record against
@@ -181,6 +181,8 @@
               "idolFound": { ".validate": "newData.isBoolean()" },
               "idolPlay": { ".validate": "newData.val() === 'saved' || newData.val() === 'wasted'" },
               "votes": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 30" },
+              "legWin": { ".validate": "newData.isBoolean()" },
+              "savedLast": { ".validate": "newData.isBoolean()" },
               "$other": { ".validate": false }
             }
           }
@@ -382,12 +384,17 @@
       ".write": false
     },
     "recapDrafts": {
-      ".read": "auth != null",
-      "$ep": {
-        ".write": "auth != null",
-        ".validate": "$ep.length <= 3 && (newData.hasChildren(['recap', 'stats', 'createdAt']) || newData.hasChild('editor'))",
-        "recap": { ".validate": "newData.isString() && newData.val().length <= 5000" },
-        "createdAt": { ".validate": "newData.isNumber()" }
+      // recapDrafts/<seasonId>/<ep>. Admins only: a draft is unreviewed and
+      // can hold results before they're published to the league.
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      ".write": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$season": {
+        ".validate": "$season.length <= 60",
+        "$ep": {
+          ".validate": "$ep.length <= 3 && (newData.hasChildren(['recap', 'stats', 'createdAt']) || newData.hasChild('editor'))",
+          "recap": { ".validate": "newData.isString() && newData.val().length <= 5000" },
+          "createdAt": { ".validate": "newData.isNumber()" }
+        }
       }
     },
     "draftBoards": {

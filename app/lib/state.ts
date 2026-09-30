@@ -114,6 +114,10 @@ export type EpisodeStat = {
   /** Played an idol: 'saved' = it cancelled votes that would have sent them home. */
   idolPlay?: 'saved' | 'wasted';
   votes?: number;
+  /** Amazing Race: finished first on the leg. */
+  legWin?: boolean;
+  /** Amazing Race: checked in last on a non-elimination leg, so stayed in. */
+  savedLast?: boolean;
 };
 
 // Leagues are data, not code — a new one appears as soon as it's written to

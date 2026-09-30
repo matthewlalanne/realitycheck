@@ -60,6 +60,8 @@ export type Terms = {
   hasTribes: boolean;
   hasIdols: boolean;
   hasStats: boolean;
+  /** Team-per-pick race show (The Amazing Race, and the dry-run test show): legs, not votes. */
+  isRace: boolean;
 };
 
 export function termsFor(meta: SeasonMeta | null | undefined): Terms {
@@ -76,5 +78,6 @@ export function termsFor(meta: SeasonMeta | null | undefined): Terms {
     hasTribes: meta ? !!meta.features?.tribes : true,
     hasIdols: meta ? !!meta.features?.idols : true,
     hasStats: meta ? !!meta.features?.stats : true,
+    isRace: team,
   };
 }
