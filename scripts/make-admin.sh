@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 # Makes someone a show admin (admins/<uid> = true): they get Settings > Show
 # admin, can enter results for every league, and see Claude's recap drafts.
 # They need to have signed in to the app once first.

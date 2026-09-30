@@ -34,7 +34,10 @@ Suggested sections (skip any that didn't happen): 🌍 WHERE THEY WENT,
 
 ## Steps
 
-1. **Which episode.** The one asked for, else the latest aired. Air dates are
+1. **Which episode.** The one asked for. When run on a schedule: every aired
+   episode that has neither a draft (`recapDrafts/amazing-race-39/<ep>`) nor a
+   published recap (`seasons/amazing-race-39/episodeNotes/<ep>`), oldest first.
+   If recaps for an episode aren't online yet, skip it and say so. Air dates are
    in `data/amazing-race-39.json`. Episode numbers are broadcast episodes,
    not leg numbers; if an episode is a double leg, cover both and say so.
 2. **Research.** Search for "Amazing Race 39 episode N recap" and the leg's
@@ -89,6 +92,6 @@ Suggested sections (skip any that didn't happen): 🌍 WHERE THEY WENT,
    Needs the Firebase CLI logged in to `tribe-league-app` (or `FIREBASE_TOKEN`
    set). If it can't write, say so and paste the recap and JSON instead.
 7. **Update** `data/amazing-race-39-explained.json` with any terms explained
-   this time, and commit it.
+   this time, commit it and push it to `main` (the next run reads it from there).
 8. **Report back** in a short table: episode, eliminated, leg winner,
    what needs Matt, and the link to the sources.

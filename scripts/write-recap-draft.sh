@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 # Files Claude's draft for one episode at recapDrafts/<seasonId>/<ep>, where
 # the episode editor offers it as "Load draft". Nothing reaches the league
 # until an admin loads it and saves. Overwrites an earlier Claude draft for
