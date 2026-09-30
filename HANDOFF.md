@@ -6,6 +6,14 @@ Owner: Matt. **Never touch Outlast** (`survivor-51-porterville`, EAS project
 dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 9:30 ET/PT (two-night premiere, Oct 1 too). Plan and decisions: README.md.
 
+## Branches and deploys (read before changing anything)
+- `main` is the source of truth. Start every session from it and merge back
+  into it. The older `claude/amazing-dirac-1h7dwk` line was merged into main
+  on 2026-09-30; don't build on it.
+- Deploy only from main: database rules, OTA (`production` = Android testers,
+  `simulator`). Deploying rules from a stale branch silently drops newer rules.
+- The home-screen icon/name only change with a new build (ask Matt first).
+
 ## Done and working (verified in the iOS simulator)
 - Real accounts (Google + email code) -> `users/<uid>`, `userLeagues/<uid>`.
 - Seasons at `seasons/<id>` (cast, meta.episodes schedule, leagues). Catalog at
