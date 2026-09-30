@@ -55,7 +55,9 @@ export function useNotificationRouting() {
       ? 'Messages'
       : data.type === 'recap'
         ? 'Standings'
-        : null;
+        : data.type === 'predictions'
+          ? 'Predictions'
+          : null;
     if (!tab) return;
 
     // On a cold start the navigator can mount a beat after this runs.

@@ -532,3 +532,90 @@ exports.notifyNewMessage = onValueCreated(
     await sendExpoPush(messages);
   },
 );
+
+// ---------------------------------------------------------------------------
+// Pick reminders
+//
+// A nudge 12 hours before an episode airs, to anyone in a league who hasn't
+// made that week's prediction yet. Same air-time math as the app's own
+// lib/countdown.ts (episodeAirTime/slotFor) — the schedule is stored as
+// wall-clock time in the network's ET/PT slot, and both sides have to agree
+// on the same absolute instant or this fires at the wrong time relative to
+// what players see. Eastern is the reference zone here (there's no "device"
+// on the server); ET and PT share the same primetime instant either way.
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const REMINDER_LEAD_MS = 12 * 60 * 60 * 1000; // 12 hours before air
+
+function nthSunday(y, m, n) {
+  const firstDow = new Date(Date.UTC(y, m, 1)).getUTCDay();
+  return 1 + ((7 - firstDow) % 7) + (n - 1) * 7;
+}
+function isDaylightTimeET(y, m, d) {
+  const day = Date.UTC(y, m, d);
+  return day >= Date.UTC(y, 2, nthSunday(y, 2, 2)) && day < Date.UTC(y, 10, nthSunday(y, 10, 1));
+}
+
+// Mirrors lib/countdown.ts's slotFor + episodeAirTime, Eastern-referenced.
+function episodeAirUtc(episodes, ep) {
+  const nums = Object.keys(episodes || {}).map(Number).filter((n) => n >= 1).sort((a, b) => a - b);
+  if (!nums.length) return null;
+  let base = nums[0];
+  let text = episodes[String(nums[0])];
+  for (const n of nums) if (n <= ep) { base = n; text = episodes[String(n)]; }
+  const [date, time] = text.split("T");
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = (time || "20:00").split(":").map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d) + (ep - base) * 7 * DAY_MS);
+  const yy = day.getUTCFullYear(), mo = day.getUTCMonth(), dd = day.getUTCDate();
+  const offset = -5 + (isDaylightTimeET(yy, mo, dd) ? 1 : 0); // ET: -5 std, -4 daylight
+  return Date.UTC(yy, mo, dd, hh - offset, mm);
+}
+
+// The next episode whose air time hasn't passed yet, same as the app's
+// upcomingEpisodeNumber — capped so a season with no schedule can't spin.
+function upcomingEpisode(episodes, now) {
+  for (let ep = 1; ep <= 200; ep++) {
+    const at = episodeAirUtc(episodes, ep);
+    if (at === null) return null;
+    if (at > now) return { ep, airAt: at };
+  }
+  return null;
+}
+
+exports.sendPickReminders = onSchedule({ schedule: "every 15 minutes", region: REGION }, async () => {
+  const db = getDatabase();
+  const now = Date.now();
+  const catalog = (await db.ref("seasonCatalog").get()).val() || {};
+
+  for (const seasonId of Object.keys(catalog)) {
+    const meta = (await db.ref(`seasons/${seasonId}/meta`).get()).val();
+    const upcoming = meta && upcomingEpisode(meta.episodes, now);
+    if (!upcoming) continue;
+    const { ep, airAt } = upcoming;
+    // Only in the window from 12h-before up to air itself — once it airs,
+    // a reminder to pick is just noise.
+    if (now < airAt - REMINDER_LEAD_MS || now >= airAt) continue;
+
+    const sentRef = db.ref(`pickReminderSent/${seasonId}/${ep}`);
+    if ((await sentRef.get()).val()) continue;
+    await sentRef.set(true);
+
+    const leagues = (await db.ref(`seasons/${seasonId}/leagues`).get()).val() || {};
+    for (const [leagueKey, lg] of Object.entries(leagues)) {
+      if (!lg) continue;
+      const picked = (await db.ref(`seasons/${seasonId}/predictions/${leagueKey}/${ep}`).get()).val() || {};
+      const people = (lg.players || []).flatMap((p) => (p.members && p.members.length ? p.members : [{ id: p.id, name: p.name }]));
+      const unpicked = people.filter((p) => !picked[p.id]);
+      if (!unpicked.length) continue;
+      const tokens = await Promise.all(unpicked.map((p) => tokenFor(db, leagueKey, p.id)));
+      const messages = tokens
+        .map((token) => token && pushMessage(token, lg.name, "This week's pick locks in a few hours — you haven't picked yet.", {
+          type: "predictions", leagueKey, seasonId,
+        }))
+        .filter(Boolean);
+      await sendExpoPush(messages);
+    }
+    logger.info("pick reminders sent", { seasonId, ep });
+  }
+});
