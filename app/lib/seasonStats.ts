@@ -17,9 +17,11 @@ export type SeasonStats = {
   idolPlays: number;
   idolSaves: number;
   votes: number;
+  legWins: number;
+  savedLast: number;
 };
 
-const EMPTY: SeasonStats = { immunity: 0, reward: 0, journeys: 0, idolsFound: 0, idolPlays: 0, idolSaves: 0, votes: 0 };
+const EMPTY: SeasonStats = { immunity: 0, reward: 0, journeys: 0, idolsFound: 0, idolPlays: 0, idolSaves: 0, votes: 0, legWins: 0, savedLast: 0 };
 
 export function statFor(root: LeagueRoot, ep: number, contestantId: string): EpisodeStat {
   return root.episodeStats?.[String(ep)]?.[contestantId] ?? {};
@@ -37,12 +39,18 @@ export function seasonStatsFor(root: LeagueRoot, contestantId: string): SeasonSt
     if (s.idolPlay) t.idolPlays++;
     if (s.idolPlay === 'saved') t.idolSaves++;
     t.votes += s.votes ?? 0;
+    if (s.legWin) t.legWins++;
+    if (s.savedLast) t.savedLast++;
   });
   return t;
 }
 
-/** The season totals on every bio, always the same six in the same order — zeros included, so bios compare at a glance. */
-export function statTiles(s: SeasonStats): { value: number; label: string }[] {
+/** The season totals on every bio, always the same tiles in the same order — zeros included, so bios compare at a glance. */
+export function statTiles(s: SeasonStats, race = false): { value: number; label: string }[] {
+  if (race) return [
+    { value: s.legWins, label: s.legWins === 1 ? 'Leg win' : 'Leg wins' },
+    { value: s.savedLast, label: 'Saved by non-elim' },
+  ];
   const t = [
     { value: s.votes, label: s.votes === 1 ? 'Vote against' : 'Votes against' },
     { value: s.immunity, label: s.immunity === 1 ? 'Immunity win' : 'Immunity wins' },
@@ -108,6 +116,11 @@ export function episodeHighlights(root: LeagueRoot, ep: number, nameOf: (id: str
     .map(([id, s]) => `${nameOf(id)} ${s.votes}`);
   if (votes.length) lines.push({ label: 'The vote', text: votes.join(', ') });
 
+  const legWin = who((s) => !!s.legWin);
+  if (legWin.length) lines.push({ label: 'Won the leg', text: legWin.join(', ') });
+  const savedLast = who((s) => !!s.savedLast);
+  if (savedLast.length) lines.push({ label: 'Last, but saved', text: `${savedLast.join(', ')} (non-elimination leg)` });
+
   if (root.game?.mergeEp === ep) lines.push({ label: 'Milestone', text: 'The tribes merged' });
   if (root.game?.juryEp === ep) lines.push({ label: 'Milestone', text: 'The jury began' });
   return lines;
@@ -130,5 +143,7 @@ export function sanitizeStat(s: EpisodeStat): EpisodeStat | null {
   if (s.idolFound) out.idolFound = true;
   if (s.idolPlay) out.idolPlay = s.idolPlay;
   if (s.votes && s.votes > 0) out.votes = Math.min(30, Math.round(s.votes));
+  if (s.legWin) out.legWin = true;
+  if (s.savedLast) out.savedLast = true;
   return Object.keys(out).length ? out : null;
 }
