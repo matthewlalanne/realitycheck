@@ -33,6 +33,8 @@ if "amazing-race-39" not in seasons:
   up["seasons/amazing-race-39/contestants"] = [
     {"id": tm["id"], "name": firsts(tm["members"]), "detail": tm["relationship"], "from": tm["hometown"],
      "members": tm["members"]} for tm in ar["teams"]]
+# Features are refreshed every run (only this one node, never results/leagues).
+up["seasons/amazing-race-39/meta/features"] = {"recaps": True}
 up["seasonCatalog/amazing-race-39"] = {"showId": "amazing-race", "showName": "The Amazing Race", "label": "Season 39", "open": True, "castCount": len(ar["teams"])}
 
 # ---- Test show for dry runs (seeded once, admins only) ----------------------------

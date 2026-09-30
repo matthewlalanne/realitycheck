@@ -16,7 +16,12 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 - Per-show wording/features via `lib/season.ts` (`termsFor`). Admin-only
   screens (episodes/eliminations, tribes) behind `admins/<uid>`.
 - Alpenglow theme + gradients; brand splash shared with the welcome screen.
-- Rules: `database.rules.json` (deployed). Seed script: `scripts/seed-seasons.sh`.
+- Recap drafts: `recapDrafts/<seasonId>/<ep>` (admin-only). AR skill at
+  `.claude/skills/amazing-race-recap`, filed via `scripts/write-recap-draft.sh`.
+  Editor has race mode (eliminated, leg winner, non-elimination).
+  NOT DEPLOYED YET: rules + seed re-run (turns on AR recaps) + OTA.
+- Admins: `scripts/make-admin.sh <name-or-uid>`.
+- Rules: `database.rules.json` (deployed, except the recap-draft change above). Seed script: `scripts/seed-seasons.sh`.
 
 ## Remaining work (in order)
 1. ~~Admin results screen works for teams~~ — done 2026-09-25: Survivor-only

@@ -64,7 +64,7 @@ export default function BioScreen({ route, navigation }: Props) {
 
   const rank = rankOf(board, contestant.id);
   // Season so far: totals, then episode by episode (newest first).
-  const tiles = statTiles(seasonStatsFor(root, contestant.id));
+  const tiles = statTiles(seasonStatsFor(root, contestant.id), terms.isRace);
   const held = holdingList(root.contestants?.find((c) => c?.id === contestant.id)?.items);
   const tribe = tribeOf(root, contestant.id);
   const epLines = Array.from({ length: Math.max(0, airedEpisodeCount(leagueKey)) }, (_, i) => i + 1)
@@ -72,6 +72,7 @@ export default function BioScreen({ route, navigation }: Props) {
     .map((ep) => {
       const st = statFor(root, ep, contestant.id);
       const bits = [
+        st.legWin && 'Won the leg', st.savedLast && 'Last, but saved by a non-elimination leg',
         st.immunity && 'Won immunity', st.reward && 'Won reward', st.journey && 'Went on a journey',
         st.idolFound && 'Found an idol', st.idolPlay === 'saved' && 'Played an idol, and it saved them',
         st.idolPlay === 'wasted' && "Played an idol they didn't need", st.votes ? `${st.votes} vote${st.votes > 1 ? 's' : ''} against` : null,

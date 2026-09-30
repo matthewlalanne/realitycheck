@@ -64,6 +64,8 @@ export type Terms = {
    *  pick alert sound, which is an actual Survivor sting and sounds wrong
    *  playing over an Amazing Race (or anything else's) draft. */
   isSurvivor: boolean;
+  /** Team-per-pick race show (The Amazing Race, and the dry-run test show): legs, not votes. */
+  isRace: boolean;
 };
 
 export function termsFor(meta: SeasonMeta | null | undefined): Terms {
@@ -81,5 +83,6 @@ export function termsFor(meta: SeasonMeta | null | undefined): Terms {
     hasIdols: meta ? !!meta.features?.idols : true,
     hasStats: meta ? !!meta.features?.stats : true,
     isSurvivor: survivor,
+    isRace: team,
   };
 }

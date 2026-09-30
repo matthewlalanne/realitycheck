@@ -14,10 +14,8 @@ import { pickAndStorePuzzleImage } from '../../lib/avatars';
 // the leaderboard is shared and keyed by size, so the lists have to match.
 const SIZE_OPTIONS = [3, 4, 5] as const;
 // Default art until a league picks its own photo — our own image, not the
-// season logo (that's CBS's). The tiki-torch sunset is Survivor-flavored, so
-// anything else gets the brand's own neutral art instead.
-const DEFAULT_PUZZLE_IMAGE_SURVIVOR = require('../../assets/backgrounds/tropical-sunset.jpg');
-const DEFAULT_PUZZLE_IMAGE_OTHER = require('../../assets/backgrounds/dusk.jpg');
+// season logo (that's CBS's): a square crop of the splash art's crest.
+const DEFAULT_PUZZLE_IMAGE = require('../../assets/brand/puzzle.jpg');
 
 function fmtClock(ms: number) {
   const s = Math.floor(ms / 1000);
@@ -52,10 +50,10 @@ function shufflePuzzle(n: number) {
 export default function PuzzleGame({ boardWidth }: { boardWidth: number }) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
-  const { league, leagueKey, terms } = useLeague();
+  const { league, leagueKey } = useLeague();
   const puzzleImage = league.puzzleImage
     ? { uri: league.puzzleImage }
-    : terms.isSurvivor ? DEFAULT_PUZZLE_IMAGE_SURVIVOR : DEFAULT_PUZZLE_IMAGE_OTHER;
+    : DEFAULT_PUZZLE_IMAGE;
   const [changingPhoto, setChangingPhoto] = useState(false);
   const changePhoto = async () => {
     setChangingPhoto(true);
