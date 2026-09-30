@@ -13,6 +13,12 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 - Deploy only from main: database rules, OTA (`production` = Android testers,
   `simulator`). Deploying rules from a stale branch silently drops newer rules.
 - The home-screen icon/name only change with a new build (ask Matt first).
+- Matt's real iPhone has a working build with notifications and gets OTA
+  updates. It was NOT built through EAS, so `eas build:list` doesn't show it.
+  Check facts before claiming something is broken: `pushTokens` in the DB
+  shows which phones get notifications; a test push via
+  https://exp.host/--/api/v2/push/send (allowed in this environment) proves it.
+- Never state a guess as fact to Matt. If unsure, check or ask.
 
 ## Done and working (verified in the iOS simulator)
 - Real accounts (Google + email code) -> `users/<uid>`, `userLeagues/<uid>`.
