@@ -11,6 +11,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
@@ -69,6 +70,9 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   // A multi-line box's return key adds a new line, so the keyboard needs its
   // own way out: a Done button in the top bar while it's open.
   const [keyboardUp, setKeyboardUp] = useState(false);
+  // Screen height less a typical keyboard and the top bars.
+  const { height: windowHeight } = useWindowDimensions();
+  const recapHeight = Math.max(200, windowHeight - 340 - 160);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
@@ -455,7 +459,26 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             returnKeyType="done"
           />
           <Text style={[styles.sectionLabel, { marginTop: 8 }]}>RECAP</Text>
-          <RecapField value={recap} onChange={setRecap} colors={colors} styles={styles} />
+          <TextInput
+            style={[styles.notes, { height: recapHeight }]}
+            value={recap}
+            onChangeText={setRecap}
+            placeholder="What happened this episode?"
+            placeholderTextColor={colors.textDim}
+            multiline
+            // Works like Notes: a fixed box that scrolls inside itself, so iOS
+            // handles it natively — a swipe scrolls the text, a tap puts the
+            // caret where you tapped, and select/copy/paste all work. Sized to
+            // fit above the keyboard, so opening it doesn't shove the page.
+            // (Letting it grow with the text and scroll the page instead made
+            // swipes open the keyboard and focus jump to the bottom of it.)
+            scrollEnabled
+            textAlignVertical="top"
+            // Roughly 800 words — a long recap and then some. The database
+            // refuses anything past it, and a refused recap would take the
+            // eliminations in the same write down with it.
+            maxLength={LIMITS.episodeRecap}
+          />
           {recap.length > LIMITS.episodeRecap - 500 && (
             <Text style={styles.counter}>
               {LIMITS.episodeRecap - recap.length} characters left
@@ -668,108 +691,6 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   );
 }
 
-// The recap box. A long recap fills most of the screen, and iOS took a swipe
-// that started on a live input as a tap: keyboard up, page jumps. So it's
-// plain text until a real tap — presses give up the touch as soon as the page
-// starts scrolling. And only the tapped paragraph turns into an input: iOS
-// opens a field with the caret at its end and scrolls there, which for the
-// whole recap meant the bottom of the page; for one paragraph it's where you
-// tapped. Each word is its own press target to put the caret on it.
-function RecapField({ value, onChange, colors, styles }: {
-  value: string;
-  onChange: (text: string) => void;
-  colors: ColorScheme;
-  styles: ReturnType<typeof makeStyles>;
-}) {
-  // The paragraph being edited, with the recap text before and after it held
-  // fixed so a blank line typed mid-paragraph doesn't shift what's being edited.
-  const [editing, setEditing] = useState<{ before: string; after: string; text: string } | null>(null);
-  // Handed to the input as it's created, before it takes focus (set any later
-  // and iOS has already moved the caret to the end). Let go once it's in
-  // place, or on the first keystroke, so the caret moves freely after that.
-  const [sel, setSel] = useState<{ start: number; end: number }>();
-
-  const parts = value.split(/(\n\s*\n)/);
-  const edit = (i: number, pos: number) => {
-    setSel({ start: pos, end: pos });
-    setEditing({ before: parts.slice(0, i).join(''), after: parts.slice(i + 1).join(''), text: parts[i] });
-  };
-
-  const preview = (text: string, onPress?: (i: number, pos: number) => void, offset = 0) =>
-    text.split(/(\n\s*\n)/).map((para, j) => {
-      if (j % 2) return null;
-      const i = j + offset;
-      return (
-        <Pressable key={i} onPress={() => onPress?.(i, para.length)}>
-          <Text style={styles.notesText}>
-            {recapWords(para).map((w, k) =>
-              w.space ? w.text : <Text key={k} onPress={() => onPress?.(i, w.end)}>{w.text}</Text>,
-            )}
-          </Text>
-        </Pressable>
-      );
-    });
-
-  if (editing) {
-    return (
-      <View style={[styles.notes, styles.notesParas]}>
-        {/* Read-only while a paragraph is open: tapping one blurs it first. */}
-        {editing.before ? preview(editing.before.replace(/\n\s*\n$/, '')) : null}
-        <TextInput
-          style={[styles.notesText, styles.notesInput]}
-          value={editing.text}
-          onChangeText={(t) => {
-            setSel(undefined);
-            setEditing({ ...editing, text: t });
-            onChange(editing.before + t + editing.after);
-          }}
-          placeholder="What happened this episode?"
-          placeholderTextColor={colors.textDim}
-          multiline
-          selection={sel}
-          onSelectionChange={(e) => {
-            if (sel && e.nativeEvent.selection.start === sel.start) setSel(undefined);
-          }}
-          autoFocus
-          onBlur={() => setEditing(null)}
-          // Grows with the text instead of scrolling inside itself, so a
-          // swipe anywhere scrolls the page (and drags the keyboard away)
-          // rather than getting trapped in the box.
-          scrollEnabled={false}
-          textAlignVertical="top"
-          // Roughly 800 words for the whole recap — a long recap and then
-          // some. The database refuses anything past it, and a refused recap
-          // would take the eliminations in the same write down with it.
-          maxLength={Math.max(editing.text.length, LIMITS.episodeRecap - editing.before.length - editing.after.length)}
-        />
-        {editing.after ? preview(editing.after.replace(/^\n\s*\n/, '')) : null}
-      </View>
-    );
-  }
-
-  return (
-    // Taps below the text land here: edit the last paragraph, at its end.
-    <Pressable onPress={() => edit(parts.length - 1, parts[parts.length - 1].length)} style={[styles.notes, styles.notesParas]}>
-      {value ? preview(value, edit) : (
-        <Text style={styles.notesPlaceholder}>What happened this episode?</Text>
-      )}
-    </Pressable>
-  );
-}
-
-// The recap split into words and the whitespace between them, with where each
-// word ends in the full text.
-function recapWords(text: string) {
-  const out: { text: string; end: number; space: boolean }[] = [];
-  let end = 0;
-  for (const part of text.split(/(\s+)/)) {
-    if (!part) continue;
-    end += part.length;
-    out.push({ text: part, end, space: /^\s/.test(part) });
-  }
-  return out;
-}
-
 const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   container: { flex: 1, backgroundColor: 'transparent' },
   // Opaque and above the header, so the header's drop shadow can't show
@@ -802,10 +723,6 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.line, borderRadius: 10,
     padding: 12, color: colors.text, fontSize: 14, lineHeight: 20, minHeight: 160,
   },
-  notesText: { color: colors.text, fontSize: 14, lineHeight: 20 },
-  notesPlaceholder: { color: colors.textDim, fontSize: 14, lineHeight: 20 },
-  notesParas: { gap: 20 },
-  notesInput: { padding: 0, margin: 0 },
   draftCard: { gap: 8, borderColor: colors.accent, borderWidth: 1.5 },
   draftTitle: { color: colors.accent, fontSize: 16, fontWeight: '800' },
   draftButton: { alignSelf: 'flex-start', backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 16, marginTop: 2 },
