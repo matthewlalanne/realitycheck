@@ -69,6 +69,8 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   // A multi-line box's return key adds a new line, so the keyboard needs its
   // own way out: a Done button in the top bar while it's open.
   const [keyboardUp, setKeyboardUp] = useState(false);
+  // The recap box is only a live input after a tap on it; see the RECAP field.
+  const [editingRecap, setEditingRecap] = useState(false);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
@@ -455,23 +457,37 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             returnKeyType="done"
           />
           <Text style={[styles.sectionLabel, { marginTop: 8 }]}>RECAP</Text>
-          <TextInput
-            style={styles.notes}
-            value={recap}
-            onChangeText={setRecap}
-            placeholder="What happened this episode?"
-            placeholderTextColor={colors.textDim}
-            multiline
-            // Grows with the text instead of scrolling inside itself, so a
-            // swipe anywhere scrolls the page (and drags the keyboard away)
-            // rather than getting trapped in the box.
-            scrollEnabled={false}
-            textAlignVertical="top"
-            // Roughly 800 words — a long recap and then some. The database
-            // refuses anything past it, and a refused recap would take the
-            // eliminations in the same write down with it.
-            maxLength={LIMITS.episodeRecap}
-          />
+          {editingRecap ? (
+            <TextInput
+              style={styles.notes}
+              value={recap}
+              onChangeText={setRecap}
+              placeholder="What happened this episode?"
+              placeholderTextColor={colors.textDim}
+              multiline
+              autoFocus
+              onBlur={() => setEditingRecap(false)}
+              // Grows with the text instead of scrolling inside itself, so a
+              // swipe anywhere scrolls the page (and drags the keyboard away)
+              // rather than getting trapped in the box.
+              scrollEnabled={false}
+              textAlignVertical="top"
+              // Roughly 800 words — a long recap and then some. The database
+              // refuses anything past it, and a refused recap would take the
+              // eliminations in the same write down with it.
+              maxLength={LIMITS.episodeRecap}
+            />
+          ) : (
+            // A long recap fills most of the screen, and iOS took a swipe that
+            // started on the live box as a tap: keyboard up, page jumps to the
+            // caret. Plain text until a real tap — a Pressable gives up the
+            // touch as soon as the page starts scrolling.
+            <Pressable onPress={() => setEditingRecap(true)} style={styles.notes}>
+              <Text style={recap ? styles.notesText : styles.notesPlaceholder}>
+                {recap || 'What happened this episode?'}
+              </Text>
+            </Pressable>
+          )}
           {recap.length > LIMITS.episodeRecap - 500 && (
             <Text style={styles.counter}>
               {LIMITS.episodeRecap - recap.length} characters left
@@ -716,6 +732,8 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
     backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.line, borderRadius: 10,
     padding: 12, color: colors.text, fontSize: 14, lineHeight: 20, minHeight: 160,
   },
+  notesText: { color: colors.text, fontSize: 14, lineHeight: 20 },
+  notesPlaceholder: { color: colors.textDim, fontSize: 14, lineHeight: 20 },
   draftCard: { gap: 8, borderColor: colors.accent, borderWidth: 1.5 },
   draftTitle: { color: colors.accent, fontSize: 16, fontWeight: '800' },
   draftButton: { alignSelf: 'flex-start', backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 16, marginTop: 2 },
