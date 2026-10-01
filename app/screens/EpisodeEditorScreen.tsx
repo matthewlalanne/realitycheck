@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -71,6 +71,10 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   const [keyboardUp, setKeyboardUp] = useState(false);
   // The recap box is only a live input after a tap on it; see the RECAP field.
   const [editingRecap, setEditingRecap] = useState(false);
+  // Where the caret goes when it opens: just after the word that was tapped.
+  const recapCaret = useRef(0);
+  const recapInput = useRef<TextInput>(null);
+  const editRecapAt = (pos: number) => { recapCaret.current = pos; setEditingRecap(true); };
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
@@ -459,6 +463,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
           <Text style={[styles.sectionLabel, { marginTop: 8 }]}>RECAP</Text>
           {editingRecap ? (
             <TextInput
+              ref={recapInput}
               style={styles.notes}
               value={recap}
               onChangeText={setRecap}
@@ -466,6 +471,10 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
               placeholderTextColor={colors.textDim}
               multiline
               autoFocus
+              onFocus={() => {
+                const pos = recapCaret.current;
+                recapInput.current?.setSelection(pos, pos);
+              }}
               onBlur={() => setEditingRecap(false)}
               // Grows with the text instead of scrolling inside itself, so a
               // swipe anywhere scrolls the page (and drags the keyboard away)
@@ -480,12 +489,21 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
           ) : (
             // A long recap fills most of the screen, and iOS took a swipe that
             // started on the live box as a tap: keyboard up, page jumps to the
-            // caret. Plain text until a real tap — a Pressable gives up the
-            // touch as soon as the page starts scrolling.
-            <Pressable onPress={() => setEditingRecap(true)} style={styles.notes}>
-              <Text style={recap ? styles.notesText : styles.notesPlaceholder}>
-                {recap || 'What happened this episode?'}
-              </Text>
+            // caret. Plain text until a real tap — presses give up the touch
+            // as soon as the page starts scrolling. Each word is its own press
+            // target so the caret lands where you tapped, not at the end.
+            <Pressable onPress={() => editRecapAt(recap.length)} style={styles.notes}>
+              {recap ? (
+                <Text style={styles.notesText}>
+                  {recapWords(recap).map((w, i) =>
+                    w.space ? w.text : (
+                      <Text key={i} onPress={() => editRecapAt(w.end)}>{w.text}</Text>
+                    ),
+                  )}
+                </Text>
+              ) : (
+                <Text style={styles.notesPlaceholder}>What happened this episode?</Text>
+              )}
             </Pressable>
           )}
           {recap.length > LIMITS.episodeRecap - 500 && (
@@ -698,6 +716,19 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+// The recap split into words and the whitespace between them, with where each
+// word ends in the full text.
+function recapWords(text: string) {
+  const out: { text: string; end: number; space: boolean }[] = [];
+  let end = 0;
+  for (const part of text.split(/(\s+)/)) {
+    if (!part) continue;
+    end += part.length;
+    out.push({ text: part, end, space: /^\s/.test(part) });
+  }
+  return out;
 }
 
 const makeStyles = (colors: ColorScheme) => StyleSheet.create({
