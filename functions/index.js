@@ -697,6 +697,84 @@ exports.notifyRecap = onValueCreated(
 );
 
 // ---------------------------------------------------------------------------
+// GIF search (app/lib/gifs.ts)
+//
+// The chat's GIF picker calls this rather than GIPHY directly, so the phone
+// never holds the key and GIPHY never sees who's searching. A free GIPHY key
+// allows 100 calls an hour for everyone combined, so every result set is
+// cached in gifCache/<query> (server-only in the rules) and a stale copy is
+// served when GIPHY says the hour is used up. Set the key once with
+// `firebase functions:secrets:set GIPHY_API_KEY --project tribe-league-app`.
+const GIPHY_API_KEY = defineSecret("GIPHY_API_KEY");
+const GIF_TTL_TRENDING_MS = 60 * 60 * 1000; // trending moves; refresh hourly
+const GIF_TTL_SEARCH_MS = 7 * 24 * 60 * 60 * 1000; // a search for "shocked" barely changes
+const GIF_LIMIT = 24;
+
+// RTDB keys can't hold . # $ [ ] / — and "Shocked" and "shocked " are the
+// same search as far as the cache is concerned.
+function gifCacheKey(q) {
+  if (!q) return "_trending";
+  return q.toLowerCase().replace(/\s+/g, " ").replace(/[.#$\[\]\/]/g, "_").slice(0, 100);
+}
+
+function toGif(g) {
+  const img = (g && g.images) || {};
+  const full = img.downsized_medium || img.original || {};
+  const thumb = img.fixed_width || {};
+  const still = img.fixed_width_still || {};
+  if (!full.url || !full.url.startsWith("https://")) return null;
+  return {
+    id: String(g.id),
+    url: full.url.slice(0, 500),
+    thumb: thumb.url || undefined,
+    preview: still.url && still.url.startsWith("https://") ? still.url.slice(0, 500) : undefined,
+    width: Number(full.width) || undefined,
+    height: Number(full.height) || undefined,
+    title: (g.title || "").slice(0, 100) || undefined,
+  };
+}
+
+exports.gifSearch = onCall({ region: REGION, secrets: [GIPHY_API_KEY] }, async (request) => {
+  if (!request.auth) throw new HttpsError("unauthenticated", "Sign in first.");
+  const q = String((request.data && request.data.q) || "").trim().slice(0, 50);
+  const db = getDatabase();
+  const cacheRef = db.ref(`gifCache/${gifCacheKey(q)}`);
+  const cached = (await cacheRef.get()).val();
+  const ttl = q ? GIF_TTL_SEARCH_MS : GIF_TTL_TRENDING_MS;
+  if (cached && cached.at && Date.now() - cached.at < ttl) {
+    return { gifs: cached.gifs || [], cached: true };
+  }
+
+  const params = new URLSearchParams({ api_key: GIPHY_API_KEY.value(), limit: String(GIF_LIMIT), rating: "pg-13" });
+  if (q) params.set("q", q);
+  const url = `https://api.giphy.com/v1/gifs/${q ? "search" : "trending"}?${params}`;
+
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (err) {
+    logger.error("giphy fetch error", err);
+    if (cached) return { gifs: cached.gifs || [], cached: true, stale: true };
+    throw new HttpsError("unavailable", "GIF search is unavailable.");
+  }
+  if (res.status === 429) {
+    if (cached) return { gifs: cached.gifs || [], cached: true, stale: true };
+    throw new HttpsError("resource-exhausted", "GIF searches used up for this hour.");
+  }
+  if (!res.ok) {
+    logger.error("giphy error", { status: res.status, body: (await res.text()).slice(0, 300) });
+    if (cached) return { gifs: cached.gifs || [], cached: true, stale: true };
+    throw new HttpsError("unavailable", "GIF search is unavailable.");
+  }
+
+  const body = await res.json();
+  // JSON round-trip drops the undefined fields, which RTDB would refuse.
+  const gifs = JSON.parse(JSON.stringify((body.data || []).map(toGif).filter(Boolean)));
+  await cacheRef.set({ at: Date.now(), gifs });
+  return { gifs };
+});
+
+// ---------------------------------------------------------------------------
 // Pick reminders
 //
 // A nudge 12 hours before an episode airs, to anyone in a league who hasn't
