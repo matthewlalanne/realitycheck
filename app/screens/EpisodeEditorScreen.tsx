@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -72,9 +72,12 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   // The recap box is only a live input after a tap on it; see the RECAP field.
   const [editingRecap, setEditingRecap] = useState(false);
   // Where the caret goes when it opens: just after the word that was tapped.
-  const recapCaret = useRef(0);
-  const recapInput = useRef<TextInput>(null);
-  const editRecapAt = (pos: number) => { recapCaret.current = pos; setEditingRecap(true); };
+  // Handed to the input as it's created, before it takes focus: set any
+  // later and iOS has already put the caret at the end and scrolled there.
+  // Let go once it's in place (or on the first keystroke) so the caret moves
+  // freely after that.
+  const [recapSel, setRecapSel] = useState<{ start: number; end: number }>();
+  const editRecapAt = (pos: number) => { setRecapSel({ start: pos, end: pos }); setEditingRecap(true); };
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
@@ -463,18 +466,17 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
           <Text style={[styles.sectionLabel, { marginTop: 8 }]}>RECAP</Text>
           {editingRecap ? (
             <TextInput
-              ref={recapInput}
               style={styles.notes}
               value={recap}
-              onChangeText={setRecap}
+              onChangeText={(t) => { setRecapSel(undefined); setRecap(t); }}
               placeholder="What happened this episode?"
               placeholderTextColor={colors.textDim}
               multiline
-              autoFocus
-              onFocus={() => {
-                const pos = recapCaret.current;
-                recapInput.current?.setSelection(pos, pos);
+              selection={recapSel}
+              onSelectionChange={(e) => {
+                if (recapSel && e.nativeEvent.selection.start === recapSel.start) setRecapSel(undefined);
               }}
+              autoFocus
               onBlur={() => setEditingRecap(false)}
               // Grows with the text instead of scrolling inside itself, so a
               // swipe anywhere scrolls the page (and drags the keyboard away)
