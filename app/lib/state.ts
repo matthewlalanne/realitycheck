@@ -114,6 +114,8 @@ export type LeagueRoot = {
   episodeTitles?: Record<string, string>;
   /** Season milestones the commissioner marks from the episode editor. */
   game?: { mergeEp?: number | null; juryEp?: number | null };
+  /** Pushed when results are published with notify on (lib/episodes.ts); drives the recap push and badge. */
+  announcements?: Record<string, { type: string; week: number; at: number }>;
 };
 
 export type EpisodeStat = {

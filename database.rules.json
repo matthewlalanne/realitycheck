@@ -374,6 +374,17 @@
         }
       }
     },
+    "recapReads": {
+      // Newest episode recap each person has opened (app/lib/recapReads.ts).
+      // The recap push's badge reads it, so it lives server-side.
+      ".read": "auth != null",
+      "$lg": {
+        "$personId": {
+          ".write": "auth != null",
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"
+        }
+      }
+    },
     "pushTokens": {
       "$entryId": {
         ".write": "auth != null",

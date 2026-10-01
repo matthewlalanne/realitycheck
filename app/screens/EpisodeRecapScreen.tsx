@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
@@ -12,6 +13,7 @@ import { episodeHighlights } from '../lib/seasonStats';
 import { eliminatedInEpisode, ownersOf, shortName } from '../lib/state';
 import { recapParts } from '../lib/recap';
 import { OutBadge } from '../components/CastawayStatus';
+import { latestRecapWeek, useRecapRead } from '../lib/recapReads';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EpisodeRecap'>;
 
@@ -21,7 +23,9 @@ export default function EpisodeRecapScreen({ route, navigation }: Props) {
   const { episode } = route.params;
   const colors = useThemeColors();
   const styles = makeStyles(colors);
-  const { root, league } = useLeague();
+  const { root, league, leagueKey, playerId } = useLeague();
+  const { markRead } = useRecapRead(leagueKey, playerId, latestRecapWeek(root));
+  useEffect(() => { markRead(episode); }, [episode, markRead]);
   const cast = root.contestants ?? [];
   const { title, body } = recapParts(root, episode);
   const out = eliminatedInEpisode(root, episode);

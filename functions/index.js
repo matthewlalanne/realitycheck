@@ -516,12 +516,16 @@ function pushMessage(to, title, body, data, badge) {
   return m;
 }
 
-// The home-screen badge: unread chat messages for this phone, across every
-// league it's registered in (Matt and AJ are in two). "Unread" uses the
-// server-side read marker (reads/<leagueKey>/<personId>, set when the chat is
-// opened — app/lib/reads.ts), not the on-device seen marker, because that's
-// the only one the server can see. A phone's token can sit under several
-// pushTokens entries, so they're grouped by token value.
+// The home-screen badge: unread chat messages plus 1 for an unread episode
+// recap, for this phone, across every league it's registered in (Matt and AJ
+// are in two). Chat uses the server-side read marker (reads/<leagueKey>/
+// <personId>, set when the chat is opened — app/lib/reads.ts), not the
+// on-device seen marker, because that's the only one the server can see.
+// Recaps use recapReads/<leagueKey>/<personId> (app/lib/recapReads.ts); with
+// no marker yet, everything before the newest recap counts as read. The app
+// recomputes the same number while it's open (screens/MainTabs.tsx). A
+// phone's token can sit under several pushTokens entries, so they're grouped
+// by token value.
 async function badgeCountsFor(db, tokens) {
   const wanted = new Set(tokens.filter(Boolean));
   if (!wanted.size) return {};
@@ -542,6 +546,16 @@ async function badgeCountsFor(db, tokens) {
     return seasonCache[leagueKey];
   }
 
+  const latestRecapCache = {};
+  async function latestRecap(seasonId) {
+    if (!(seasonId in latestRecapCache)) {
+      const ann = (await db.ref(`seasons/${seasonId}/announcements`).get()).val() || {};
+      latestRecapCache[seasonId] = Object.values(ann).reduce(
+        (max, a) => (a && a.type === "recap" && typeof a.week === "number" && a.week > max ? a.week : max), 0);
+    }
+    return latestRecapCache[seasonId];
+  }
+
   const unreadCache = {};
   async function unread(leagueKey, personId) {
     const key = `${leagueKey}/${personId}`;
@@ -553,8 +567,12 @@ async function badgeCountsFor(db, tokens) {
         // Filtered here rather than with orderByChild so it doesn't hang on a
         // rules-side .indexOn; a league's chat is small enough to read whole.
         const msgs = (await db.ref(`seasons/${seasonId}/messages/${leagueKey}`).get()).val() || {};
-        unreadCache[key] = Object.values(msgs)
+        const chat = Object.values(msgs)
           .filter((m) => m && m.authorId !== personId && (m.createdAt || 0) > readAt).length;
+        const latest = await latestRecap(seasonId);
+        const seenWeek = (await db.ref(`recapReads/${leagueKey}/${personId}`).get()).val();
+        const recapSeen = typeof seenWeek === "number" ? seenWeek : latest - 1;
+        unreadCache[key] = chat + (latest > 0 && latest > recapSeen ? 1 : 0);
       }
     }
     return unreadCache[key];
@@ -642,6 +660,38 @@ exports.notifyNewMessage = onValueCreated(
         type: "message", leagueKey, seasonId,
       }, badges[token] || 0))
       .filter(Boolean);
+    await sendExpoPush(messages);
+  },
+);
+
+// Fires when the commissioner publishes an episode's results with "notify"
+// on (app/lib/episodes.ts writes the announcement). Results are entered once
+// per season, so everyone in every league playing it hears about it. No
+// names — the title is the league, the body only says results are in.
+exports.notifyRecap = onValueCreated(
+  { ref: "/seasons/{seasonId}/announcements/{id}", region: REGION },
+  async (event) => {
+    const ann = event.data.val();
+    if (!ann || ann.type !== "recap" || typeof ann.week !== "number") return;
+    const { seasonId } = event.params;
+    const db = getDatabase();
+    const leagues = (await db.ref(`seasons/${seasonId}/leagues`).get()).val() || {};
+
+    const sends = [];
+    for (const [leagueKey, lg] of Object.entries(leagues)) {
+      if (!lg) continue;
+      const people = (lg.players || []).flatMap((p) => (p.members && p.members.length ? p.members : [{ id: p.id, name: p.name }]));
+      const tokens = await Promise.all(people.map((p) => tokenFor(db, leagueKey, p.id)));
+      tokens.forEach((token) => token && sends.push({ token, leagueKey, name: lg.name }));
+    }
+    const badges = await badgeCountsFor(db, sends.map((x) => x.token));
+    // One phone in two leagues of the same season gets one push, not two.
+    const seen = new Set();
+    const messages = sends
+      .filter((x) => !seen.has(x.token) && seen.add(x.token))
+      .map((x) => pushMessage(x.token, x.name, `Episode ${ann.week} results are in.`, {
+        type: "recap", leagueKey: x.leagueKey, seasonId,
+      }, badges[x.token] || 0));
     await sendExpoPush(messages);
   },
 );

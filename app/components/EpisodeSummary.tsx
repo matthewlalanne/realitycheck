@@ -10,6 +10,8 @@ import { airedEpisodeCount } from '../lib/countdown';
 import { termsFor } from '../lib/season';
 import { isEliminated, type LeagueRecord, type LeagueRoot } from '../lib/state';
 import { recapParts } from '../lib/recap';
+import { latestRecapWeek, useRecapRead } from '../lib/recapReads';
+import { useLeague } from '../contexts/LeagueContext';
 
 // The season's episodes, newest first, each a link to its recap page. Recaps
 // run long, so they live on their own pages rather than stacked in here.
@@ -17,6 +19,9 @@ export default function EpisodeSummary({ root, leagueKey }: { root: LeagueRoot; 
   const colors = useThemeColors();
   const styles = makeStyles(colors);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { playerId } = useLeague();
+  const latest = latestRecapWeek(root);
+  const { seenWeek } = useRecapRead(leagueKey, playerId, latest);
 
   const cast = root.contestants || [];
   const stillIn = cast.filter((c) => c && !isEliminated(c)).length;
@@ -34,6 +39,8 @@ export default function EpisodeSummary({ root, leagueKey }: { root: LeagueRoot; 
       <View style={styles.list}>
       {weeks.map((w) => {
         const { title } = recapParts(root, w);
+        // Results you haven't opened yet — the same thing the home-screen badge counts.
+        const isNew = seenWeek !== null && w > seenWeek && w <= latest;
         return (
           <Pressable
             key={w}
@@ -46,6 +53,7 @@ export default function EpisodeSummary({ root, leagueKey }: { root: LeagueRoot; 
               <Text style={styles.epNum}>Episode {w}</Text>
               {!!title && <Text style={styles.title} numberOfLines={1}>{title}</Text>}
             </View>
+            {isNew && <View style={styles.newDot} accessibilityLabel="New" />}
             <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
           </Pressable>
         );
@@ -66,4 +74,5 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   list: { marginTop: 6 },
   epNum: { color: colors.text, fontSize: 18, fontWeight: '800' },
   title: { color: colors.textDim, fontSize: 14, marginTop: 2 },
+  newDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: colors.red },
 });
