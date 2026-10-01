@@ -149,3 +149,17 @@ dbe05b04-…). First real test: The Amazing Race 39, premieres Wed 2026-09-30
 - Keep replies short; tables over prose. Never state Survivor results.
 - Matt wants to stay on free tiers.
 - Commit with `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`.
+
+## 2026-10-01
+- Home-screen icon badge (Instagram-style), deployed (rules + OTA + functions):
+  number = unread chat + 1 for an unread recap. Server sets it on every
+  message/recap push (`badgeCountsFor` in functions/index.js); the app keeps
+  it in sync while open (screens/MainTabs.tsx).
+- New `notifyRecap` function: publishing results with notify on now pushes
+  "Episode N results are in." (no names) to every league in the season.
+- `recapReads/<lg>/<personId>` = newest recap opened (lib/recapReads.ts);
+  red dot on unopened episodes in the Episodes list.
+- Predictions tab dot: weekly pick missing within 12h of air, or season pick
+  open and empty.
+- Still not built: reaction pushes; server doesn't respect per-device notif
+  toggles.
