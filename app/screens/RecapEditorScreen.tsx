@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CommonActions } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { useThemeColors } from '../contexts/ThemeContext';
 import type { ColorScheme } from '../theme';
 import BackButton from '../components/BackButton';
 import { LIMITS } from '../lib/limits';
+import { putRecap } from '../lib/recapHandoff';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'RecapEditor'>;
 
@@ -19,12 +19,6 @@ export default function RecapEditorScreen({ route, navigation }: Props) {
   const colors = useThemeColors();
   const styles = makeStyles(colors);
   const [text, setText] = useState(initial);
-  const latest = useRef(text);
-  latest.current = text;
-
-  useEffect(() => navigation.addListener('beforeRemove', () => {
-    navigation.dispatch({ ...CommonActions.setParams({ recapEdit: latest.current }), source: returnKey });
-  }), [navigation, returnKey]);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -35,7 +29,7 @@ export default function RecapEditorScreen({ route, navigation }: Props) {
       <TextInput
         style={styles.input}
         value={text}
-        onChangeText={setText}
+        onChangeText={(t) => { setText(t); putRecap(returnKey, t); }}
         placeholder="What happened this episode?"
         placeholderTextColor={colors.textDim}
         multiline

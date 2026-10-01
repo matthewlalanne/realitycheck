@@ -16,10 +16,10 @@ export type RootStackParamList = {
   // Commissioner-only, pushed from Settings.
   EpisodeManager: undefined;
   // One episode at a time: eliminations + recap + publish.
-  // `recapEdit` is how RecapEditor hands the edited recap back.
-  EpisodeEditor: { episode: number; recapEdit?: string };
+  EpisodeEditor: { episode: number };
   // The recap on its own full-screen page, Notes-style. Pushed from
-  // EpisodeEditor; `returnKey` is that editor's route, which gets the text back.
+  // EpisodeEditor; `returnKey` is that editor's route, which gets the text
+  // back through lib/recapHandoff.
   RecapEditor: { episode: number; text: string; returnKey: string };
   // Commissioner-only, pushed from Settings: tribe names, colors, members.
   Tribes: undefined;

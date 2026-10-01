@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -31,8 +31,9 @@ import { sanitizeStat } from '../lib/seasonStats';
 import { textOnTribe, tribesOf } from '../lib/tribes';
 import { shortName, type EpisodeStat } from '../lib/state';
 import { clearRecapDraft, isRaceDraft, saveEditorDraft, useRecapDrafts, type RecapDraft } from '../lib/recapDraft';
-import { usePreventRemove } from '@react-navigation/native';
+import { useFocusEffect, usePreventRemove } from '@react-navigation/native';
 import { parseRecap, recapParts } from '../lib/recap';
+import { takeRecap } from '../lib/recapHandoff';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'EpisodeEditor'>;
 
@@ -164,13 +165,11 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
     setBaseline(null); // re-baselined on the next render from the restored state
   }, [ready, restored, draft?.editor, dirty]);
 
-  // The full-screen recap editor hands its text back here as it closes.
-  const recapEdit = route.params.recapEdit;
-  useEffect(() => {
-    if (recapEdit === undefined) return;
-    setRecap(recapEdit);
-    navigation.setParams({ recapEdit: undefined });
-  }, [recapEdit]);
+  // Coming back from the full-screen recap editor: take what was typed there.
+  useFocusEffect(useCallback(() => {
+    const text = takeRecap(route.key);
+    if (text !== undefined) setRecap(text);
+  }, [route.key]));
 
   const savedTitle = root.episodeTitles?.[String(episode)] ?? '';
   useEffect(() => {
