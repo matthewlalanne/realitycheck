@@ -41,6 +41,7 @@ import TypingBubble from '../../components/TypingBubble';
 import ReadReceipt from '../../components/ReadReceipt';
 import LinkPreview from '../../components/LinkPreview';
 import { readersOf, useMarkRead, useReads } from '../../lib/reads';
+import * as Notifications from 'expo-notifications';
 import { peopleOf } from '../../lib/state';
 
 // Small, deliberately Survivor-flavoured set — a long picker would be more
@@ -175,6 +176,11 @@ export default function MessagesScreen() {
     if (!isFocused) return;
     markSeen(Math.max(newest, Date.now()));
     markRead();
+    // The home-screen number is the unread chat count the server sent with
+    // the last push (functions/index.js badgeCountsFor), so reading the chat
+    // clears it. A second league's unread isn't counted back in until its
+    // next push, which is fine — the tab dot still shows it.
+    Notifications.setBadgeCountAsync(0).catch(() => {});
   }, [isFocused, newest, markSeen, markRead]);
 
   function openPicker(id: string, mine: boolean) {

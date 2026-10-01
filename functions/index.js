@@ -508,8 +508,64 @@ async function tokenFor(db, leagueKey, playerId) {
   return v && v.token ? v.token : null;
 }
 
-function pushMessage(to, title, body, data) {
-  return { to, title, body, data, sound: "default", priority: "high" };
+function pushMessage(to, title, body, data, badge) {
+  const m = { to, title, body, data, sound: "default", priority: "high" };
+  // iOS sets the icon number to exactly this; leaving it off keeps whatever
+  // the icon already shows. Android launchers mostly just show a dot.
+  if (typeof badge === "number") m.badge = badge;
+  return m;
+}
+
+// The home-screen badge: unread chat messages for this phone, across every
+// league it's registered in (Matt and AJ are in two). "Unread" uses the
+// server-side read marker (reads/<leagueKey>/<personId>, set when the chat is
+// opened — app/lib/reads.ts), not the on-device seen marker, because that's
+// the only one the server can see. A phone's token can sit under several
+// pushTokens entries, so they're grouped by token value.
+async function badgeCountsFor(db, tokens) {
+  const wanted = new Set(tokens.filter(Boolean));
+  if (!wanted.size) return {};
+  const all = (await db.ref("pushTokens").get()).val() || {};
+  const catalog = (await db.ref("seasonCatalog").get()).val() || {};
+
+  const seasonCache = {};
+  async function seasonOf(leagueKey) {
+    if (!(leagueKey in seasonCache)) {
+      seasonCache[leagueKey] = null;
+      for (const s of Object.keys(catalog)) {
+        if ((await db.ref(`seasons/${s}/leagues/${leagueKey}/name`).get()).exists()) {
+          seasonCache[leagueKey] = s;
+          break;
+        }
+      }
+    }
+    return seasonCache[leagueKey];
+  }
+
+  const unreadCache = {};
+  async function unread(leagueKey, personId) {
+    const key = `${leagueKey}/${personId}`;
+    if (!(key in unreadCache)) {
+      const seasonId = await seasonOf(leagueKey);
+      if (!seasonId) unreadCache[key] = 0;
+      else {
+        const readAt = (await db.ref(`reads/${leagueKey}/${personId}`).get()).val() || 0;
+        // Filtered here rather than with orderByChild so it doesn't hang on a
+        // rules-side .indexOn; a league's chat is small enough to read whole.
+        const msgs = (await db.ref(`seasons/${seasonId}/messages/${leagueKey}`).get()).val() || {};
+        unreadCache[key] = Object.values(msgs)
+          .filter((m) => m && m.authorId !== personId && (m.createdAt || 0) > readAt).length;
+      }
+    }
+    return unreadCache[key];
+  }
+
+  const counts = {};
+  for (const entry of Object.values(all)) {
+    if (!entry || !wanted.has(entry.token) || !entry.leagueKey || !entry.playerId) continue;
+    counts[entry.token] = (counts[entry.token] || 0) + await unread(entry.leagueKey, entry.playerId);
+  }
+  return counts;
 }
 
 // Same snake-draft math as app/lib/state.ts (draftOrderOf/draftSequence/
@@ -580,10 +636,11 @@ exports.notifyNewMessage = onValueCreated(
 
     const authorName = msg.authorName || "Someone";
     const tokens = await Promise.all(others.map((p) => tokenFor(db, leagueKey, p.id)));
+    const badges = await badgeCountsFor(db, tokens);
     const messages = tokens
       .map((token, i) => token && pushMessage(token, lg.name, `${authorName} sent a message`, {
         type: "message", leagueKey, seasonId,
-      }))
+      }, badges[token] || 0))
       .filter(Boolean);
     await sendExpoPush(messages);
   },
