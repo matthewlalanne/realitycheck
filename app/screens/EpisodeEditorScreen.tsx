@@ -11,7 +11,6 @@ import {
   Text,
   TextInput,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
@@ -70,9 +69,6 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
   // A multi-line box's return key adds a new line, so the keyboard needs its
   // own way out: a Done button in the top bar while it's open.
   const [keyboardUp, setKeyboardUp] = useState(false);
-  // Screen height less a typical keyboard and the top bars.
-  const { height: windowHeight } = useWindowDimensions();
-  const recapHeight = Math.max(200, windowHeight - 340 - 160);
   useEffect(() => {
     const show = Keyboard.addListener('keyboardDidShow', () => setKeyboardUp(true));
     const hide = Keyboard.addListener('keyboardDidHide', () => setKeyboardUp(false));
@@ -167,6 +163,14 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
     setSavedAt(ed.savedAt ?? null);
     setBaseline(null); // re-baselined on the next render from the restored state
   }, [ready, restored, draft?.editor, dirty]);
+
+  // The full-screen recap editor hands its text back here as it closes.
+  const recapEdit = route.params.recapEdit;
+  useEffect(() => {
+    if (recapEdit === undefined) return;
+    setRecap(recapEdit);
+    navigation.setParams({ recapEdit: undefined });
+  }, [recapEdit]);
 
   const savedTitle = root.episodeTitles?.[String(episode)] ?? '';
   useEffect(() => {
@@ -410,10 +414,7 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
       />
       <ScrollView
         contentContainerStyle={styles.content}
-        // Scrolling never closes the keyboard (the Done button does), like
-        // Notes. Dragging it away dropped its padding mid-scroll and threw
-        // the page to a random spot.
-        keyboardDismissMode="none"
+        keyboardDismissMode="interactive"
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
@@ -462,26 +463,19 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
             returnKeyType="done"
           />
           <Text style={[styles.sectionLabel, { marginTop: 8 }]}>RECAP</Text>
-          <TextInput
-            style={[styles.notes, { height: recapHeight }]}
-            value={recap}
-            onChangeText={setRecap}
-            placeholder="What happened this episode?"
-            placeholderTextColor={colors.textDim}
-            multiline
-            // Works like Notes: a fixed box that scrolls inside itself, so iOS
-            // handles it natively — a swipe scrolls the text, a tap puts the
-            // caret where you tapped, and select/copy/paste all work. Sized to
-            // fit above the keyboard, so opening it doesn't shove the page.
-            // (Letting it grow with the text and scroll the page instead made
-            // swipes open the keyboard and focus jump to the bottom of it.)
-            scrollEnabled
-            textAlignVertical="top"
-            // Roughly 800 words — a long recap and then some. The database
-            // refuses anything past it, and a refused recap would take the
-            // eliminations in the same write down with it.
-            maxLength={LIMITS.episodeRecap}
-          />
+          {/* Read-only here; a tap opens the full-screen editor. A long text
+              box inside this scrolling page fought the keyboard (swipes
+              opened it, focus jumped to the bottom), so it gets its own page,
+              like Notes. A press gives way as soon as the page scrolls. */}
+          <Pressable
+            style={styles.notes}
+            onPress={() => navigation.navigate('RecapEditor', { episode, text: recap, returnKey: route.key })}
+          >
+            <Text style={recap ? styles.notesText : styles.notesPlaceholder} numberOfLines={8}>
+              {recap || 'What happened this episode?'}
+            </Text>
+            <Text style={styles.notesEdit}>{recap ? 'Edit recap' : 'Write recap'}</Text>
+          </Pressable>
           {recap.length > LIMITS.episodeRecap - 500 && (
             <Text style={styles.counter}>
               {LIMITS.episodeRecap - recap.length} characters left
@@ -724,8 +718,11 @@ const makeStyles = (colors: ColorScheme) => StyleSheet.create({
   doneText: { color: colors.onAccent, fontSize: 15, fontWeight: '800' },
   notes: {
     backgroundColor: colors.bg2, borderWidth: 1, borderColor: colors.line, borderRadius: 10,
-    padding: 12, color: colors.text, fontSize: 14, lineHeight: 20, minHeight: 160,
+    padding: 12, minHeight: 160, gap: 10,
   },
+  notesText: { color: colors.text, fontSize: 14, lineHeight: 20, flex: 1 },
+  notesPlaceholder: { color: colors.textDim, fontSize: 14, lineHeight: 20, flex: 1 },
+  notesEdit: { color: colors.accent, fontSize: 14, fontWeight: '800' },
   draftCard: { gap: 8, borderColor: colors.accent, borderWidth: 1.5 },
   draftTitle: { color: colors.accent, fontSize: 16, fontWeight: '800' },
   draftButton: { alignSelf: 'flex-start', backgroundColor: colors.accent, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 16, marginTop: 2 },

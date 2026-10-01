@@ -14,6 +14,7 @@ import UpdateRequiredScreen from './screens/UpdateRequiredScreen';
 import MyBoardScreen from './screens/MyBoardScreen';
 import EpisodeManagerScreen from './screens/EpisodeManagerScreen';
 import EpisodeEditorScreen from './screens/EpisodeEditorScreen';
+import RecapEditorScreen from './screens/RecapEditorScreen';
 import TribesScreen from './screens/TribesScreen';
 import EpisodeRecapScreen from './screens/EpisodeRecapScreen';
 import TeamProfileScreen from './screens/TeamProfileScreen';
@@ -151,6 +152,7 @@ function RootNavigator() {
         <Stack.Screen name="MyBoard" component={MyBoardScreen} />
         <Stack.Screen name="EpisodeManager" component={EpisodeManagerScreen} />
         <Stack.Screen name="EpisodeEditor" component={EpisodeEditorScreen} />
+        <Stack.Screen name="RecapEditor" component={RecapEditorScreen} />
         <Stack.Screen name="Tribes" component={TribesScreen} />
         <Stack.Screen name="EpisodeRecap" component={EpisodeRecapScreen} />
         <Stack.Screen name="TeamProfile" component={TeamProfileScreen} />
