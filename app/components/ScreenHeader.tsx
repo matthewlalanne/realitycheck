@@ -21,11 +21,13 @@ export function useTopInset() {
 }
 
 // Every tab screen renders this, which is what puts the league dropdown in
-// the same place on every page for people who play in more than one.
+// the same place on every tab for people who play in more than one.
 //
 // `topInset` must be turned off on any screen that already renders a
 // BackButton, since that clears the notch itself — otherwise the two stack up
-// and the title sits miles down the page.
+// and the title sits miles down the page. Those pushed pages also drop the
+// league dropdown: switching leagues belongs to the tabs, not a page you
+// drilled into.
 export default function ScreenHeader({
   title,
   subtitle,
@@ -48,7 +50,7 @@ export default function ScreenHeader({
     <View style={[styles.wrap, { paddingTop: top }]}>
       <View style={styles.titleRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        {(allLeagues.length > 1 || !!onExitLeague) && (
+        {topInset && (allLeagues.length > 1 || !!onExitLeague) && (
           <Pressable
             style={styles.trigger}
             onPress={() => setOpen(true)}
