@@ -410,7 +410,10 @@ export default function EpisodeEditorScreen({ route, navigation }: Props) {
       />
       <ScrollView
         contentContainerStyle={styles.content}
-        keyboardDismissMode="interactive"
+        // Scrolling never closes the keyboard (the Done button does), like
+        // Notes. Dragging it away dropped its padding mid-scroll and threw
+        // the page to a random spot.
+        keyboardDismissMode="none"
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
       >
